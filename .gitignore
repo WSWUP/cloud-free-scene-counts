@@ -1,0 +1,15 @@
+# Python specific
+*.pyc
+
+# Full bulk metadata CSV files
+/LANDSAT_8.csv
+/LANDSAT_ETM_SLC_OFF.csv
+/LANDSAT_ETM.csv
+/LANDSAT_TM-1980-1989.csv
+/LANDSAT_TM-1990-1999.csv
+/LANDSAT_TM-2000-2009.csv
+/LANDSAT_TM-2010-2012.csv
+
+# Example quicklooks
+example/*/*/*.jpg
+example/*/*/*/*.jpg
