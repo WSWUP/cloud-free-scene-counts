@@ -1,32 +1,29 @@
-#--------------------------------
-# Name:         metadata_csv_image_download.py
-# Created       2017-04-11
-# Python:       2.7
-#--------------------------------
-
 import argparse
 import datetime as dt
 import logging
 import os
 import re
+import shutil
 import sys
-import urllib
+# Python 2/3 support
+try:
+    import urllib.request as urlrequest
+except ImportError:
+    import urllib as urlrequest
 
 import pandas as pd
 
 
-def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
-         overwrite_flag=False):
+def main(csv_ws, output_folder, skip_list_path=None,
+         overwrite_flag=False, example_flag=False):
     """Download Landsat Quicklook images
 
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
         output_folder (str): folder path
-        landsat_folder (str): folder path of Landsat scenes.
-            Script assumes scenes are organized in separate
-            folders by path, row, and year
         skip_list_path (str): file path of Landsat skip list
         overwrite_flag (bool): if True, overwrite existing files
+        example_flag (bool): if True, filter CSV files for example
 
     Returns:
         None
@@ -37,15 +34,23 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
     start_month = 1
     end_month = 12
 
+    # Custom year filtering can be applied here
     year_list = list(range(1984, dt.datetime.now().year + 1))
     # year_list = []
 
+    # Custom path/row filtering can be applied here
     path_row_list = []
     path_list = []
     row_list = []
 
+    # Filter CSVs for example
+    if example_flag:
+        year_list = [2000, 2015]
+        path_row_list = ['p043r030']
+
     csv_list = [
-        'LANDSAT_8.csv', 'LANDSAT_ETM.csv', 'LANDSAT_ETM_SLC_OFF.csv',
+        'LANDSAT_8.csv',
+        'LANDSAT_ETM.csv', 'LANDSAT_ETM_SLC_OFF.csv',
         'LANDSAT_TM-1980-1989.csv', 'LANDSAT_TM-1990-1999.csv',
         'LANDSAT_TM-2000-2009.csv', 'LANDSAT_TM-2010-2012.csv']
 
@@ -80,15 +85,15 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
     except:
         path_row_list = []
     try:
-        path_list = map(int, path_list)
+        path_list = list(map(int, path_list))
     except:
         path_list = []
     try:
-        row_list = map(int, row_list)
+        row_list = list(map(int, row_list))
     except:
         row_list = []
     try:
-        year_list = map(int, year_list)
+        year_list = list(map(int, year_list))
     except:
         year_list = []
 
@@ -130,9 +135,12 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
         # Read in the CSV, remove extra columns
         input_df = pd.read_csv(
             csv_path, usecols=input_cols, parse_dates=[date_col])
-        logging.debug('  {}'.format(', '.join(input_df.columns.values)))
+        logging.debug('  Fields: {}'.format(', '.join(input_df.columns.values)))
         # logging.debug(input_df.head())
-        logging.debug('  Scene count: {}'.format(len(input_df)))
+        logging.debug('  Initial scene count: {}'.format(len(input_df)))
+        if input_df.empty:
+            logging.debug('  Empty DataFrame, skipping file')
+            continue
 
         # Filter scenes first by path and row separately
         if path_list:
@@ -143,14 +151,12 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
             input_df = input_df[input_df[row_col].isin(row_list)]
 
         # Then filter by path/row combined
-        # print(input_df)
-        # input('ENTER')
         try:
             input_df['PATH_ROW'] = input_df[[path_col, row_col]].apply(
                 lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
         except ValueError:
-            input_df['PATH_ROW'] = ''
-            logging.debug('  Empty dataframe')
+            logging.debug('  Possible empty DataFrame, skipping file')
+            continue
         if path_row_list:
             logging.debug('  Filtering by path/row')
             input_df = input_df[input_df[path_row_col].isin(path_row_list)]
@@ -173,7 +179,10 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
             logging.debug('  Filtering images without a quicklook')
             input_df = input_df[input_df[browse_col] != 'N']
 
-        logging.debug('  Scene count: {}'.format(len(input_df)))
+        logging.debug('  Final scene count: {}'.format(len(input_df)))
+        if input_df.empty:
+            logging.debug('  Empty DataFrame, skipping file')
+            continue
 
         # Each item is a "row" of data
         for row_index, row_df in input_df.iterrows():
@@ -204,23 +213,13 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
                     os.remove(image_path)
                 if os.path.isfile(cloud_path):
                     # logging.debug('  {} - removing'.format(scene_id))
-                    os.remove(image_path)
+                    os.remove(cloud_path)
             # Skip if file is already classified as cloud
             elif os.path.isfile(cloud_path):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 logging.debug('  {} - cloudy, skipping'.format(scene_id))
                 continue
-
-            # # Only download quick looks for existing scenes
-            # if landsat_folder is not None:
-            #     scene_path = os.path.join(
-            #         landsat_folder, str(int(row_df[path_col])),
-            #         str(int(row_df[row_col])), str(image_dt.year),
-            #         scene_id + '.tar.gz')
-            #     if not os.path.join(scene_path):
-            #         logging.debug('  {} - no tar.gz, skipping'.format(scene_id))
-            #         continue
 
             # # Try downloading fully cloudy scenes to cloud folder
             # if int(row_dict[cloud_cover_col]) >= 9:
@@ -253,18 +252,31 @@ def main(csv_ws, output_folder, landsat_folder=None, skip_list_path=None,
             download_list.append([image_path, row_df[url_col]])
 
     # Download Landsat Look Images
+    logging.debug('')
     for image_path, image_url in sorted(download_list):
+        logging.info('{0}'.format(image_path))
+        logging.debug('  {0}'.format(image_url))
         image_folder = os.path.dirname(image_path)
         if not os.path.isdir(image_folder):
             os.makedirs(image_folder)
 
         # Make cloudy image folder also
+        cloud_folder = os.path.join(image_folder, cloud_folder_name)
         if (os.path.basename(image_folder) != cloud_folder_name and
-            not os.path.isdir(os.path.join(image_folder, cloud_folder_name))):
-            os.makedirs(os.path.join(image_folder, cloud_folder_name))
+                not os.path.isdir(cloud_folder)):
+            os.makedirs(cloud_folder)
 
-        logging.info('{0}'.format(image_path))
-        urllib.urlretrieve(image_url, image_path)
+        # Trying to catch errors when the bulk metadata site is down
+        try:
+            with urlrequest.urlopen(image_url) as response:
+                logging.debug('  Response')
+                with open(image_path, 'wb') as out_file:
+                    logging.debug('  Open')
+                    shutil.copyfileobj(response, out_file)
+        except Exception as e:
+            logging.info('  {}\n  Try manually checking the bulk metadata '
+                         'site\n'.format(e))
+        # urlrequest.urlretrieve(image_url, image_path)
 
 
 def arg_parse():
@@ -277,9 +289,8 @@ def arg_parse():
         '--csv', type=lambda x: is_valid_folder(parser, x),
         default=os.getcwd(), help='Landsat bulk metadata CSV folder')
     parser.add_argument(
-        '--output', default=sys.path[0], help='Output folder')
-    parser.add_argument(
-        '--landsat', default=None, help='Landsat tar.gz folder')
+        '--output', default=os.getcwd(), help='Output folder')
+    #     '--output', default=sys.path[0], help='Output folder')
     parser.add_argument(
         '--skiplist', default=None, help='Skips files in skip list')
     parser.add_argument(
@@ -296,8 +307,6 @@ def arg_parse():
     #     args.csv = get_csv_path(os.getcwd())
     if os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
-    if args.landsat and os.path.isdir(os.path.abspath(args.landsat)):
-        args.landsat = os.path.abspath(args.landsat)
     return args
 
 
@@ -330,5 +339,4 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_ws=args.csv, output_folder=args.output,
-         landsat_folder=args.landsat, skip_list_path=args.skiplist,
-         overwrite_flag=args.overwrite)
+         skip_list_path=args.skiplist, overwrite_flag=args.overwrite)

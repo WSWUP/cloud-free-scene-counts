@@ -1,9 +1,3 @@
-#--------------------------------
-# Name:         make_quicklook_lists.py
-# Created       2017-04-17
-# Python:       2.7
-#--------------------------------
-
 import argparse
 import calendar
 from collections import defaultdict
@@ -15,7 +9,7 @@ import sys
 
 
 def main(quicklook_folder, output_folder, skip_list_path=None):
-    """
+    """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Args:
         quicklook_folder: folder path
@@ -30,6 +24,7 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
     output_keep_name = 'clear_scenes.txt'
     output_skip_name = 'cloudy_scenes.txt'
     summary_name = 'clear_scene_counts.txt'
+    summary_flag = True
 
     output_keep_path = os.path.join(output_folder, output_keep_name)
     output_skip_path = os.path.join(output_folder, output_skip_name)
@@ -44,11 +39,7 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
     path_list = []
     row_list = []
 
-    # Force all values to be integers
-    try:
-        path_row_list = path_row_list[:]
-    except:
-        path_row_list = []
+    # Force path, row, and year list values to integer type
     try:
         path_list = map(int, path_list)
     except:
@@ -61,6 +52,12 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
         year_list = map(int, year_list)
     except:
         year_list = []
+
+    # Create path/row list if it wasn't declared above
+    # try:
+    #     path_row_list = path_row_list[:]
+    # except:
+    #     path_row_list = []
 
     # Error checking
     if not os.path.isdir(output_folder):
@@ -139,8 +136,8 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
             for year, doy, scene in sorted(output_skip_list):
                 output_f.write('{}\n'.format(scene))
 
-    if output_keep_list:
-        # This would be a lot easier with pandas
+    if summary_flag and output_keep_list:
+        # This would probably be easier to do with pandas
         # def nested_dict():
         #     return defaultdict(nested_dict)
         # counts = nested_dict()

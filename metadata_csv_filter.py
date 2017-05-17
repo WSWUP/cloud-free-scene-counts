@@ -5,11 +5,17 @@ import os
 import pandas as pd
 
 
-def main(csv_ws=os.getcwd()):
-    """"""
+def main(csv_ws, example_flag=False):
+    """Filter Landsat Bulk Metadata CSV files
+
+    Args:
+        csv_ws (): workspace of the Landsat bulk metadata CSV files
+        example_flag (bool): if True, filter CSV files for example
+    """
     logging.info('\nFilter/reducing Landsat Metdata CSV files')
 
-    filter_conus = True
+    conus_flag = True
+
     csv_list = [
         'LANDSAT_8.csv',
         'LANDSAT_ETM.csv',
@@ -17,7 +23,8 @@ def main(csv_ws=os.getcwd()):
         'LANDSAT_TM-1980-1989.csv',
         'LANDSAT_TM-1990-1999.csv',
         'LANDSAT_TM-2000-2009.csv',
-        'LANDSAT_TM-2010-2012.csv']
+        'LANDSAT_TM-2010-2012.csv'
+    ]
 
     # Input fields
     browse_col = 'browseAvailable'
@@ -61,16 +68,18 @@ def main(csv_ws=os.getcwd()):
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
         # Remove non-CONUS path/rows
-        if filter_conus:
+        if conus_flag:
             input_df = input_df[input_df[path_col] >= 10]
             input_df = input_df[input_df[path_col] <= 48]
             input_df = input_df[input_df[row_col] >= 25]
             input_df = input_df[input_df[row_col] <= 43]
 
         # Build the example CSV files for path/row 43/30
-        input_df = input_df[input_df[path_col] == 43]
-        input_df = input_df[input_df[row_col] == 30]
-        input_df = input_df[input_df[date_col].dt.year < 2017]
+        if example_flag:
+            input_df = input_df[input_df[path_col] == 43]
+            input_df = input_df[input_df[row_col] == 30]
+            input_df = input_df[
+                input_df[date_col].dt.year.isin([2000, 2015])]
 
         input_df = input_df[input_df['sunElevation'] > 0]
         logging.debug('  Scene count: {}'.format(len(input_df)))
@@ -85,6 +94,9 @@ def arg_parse():
         description=('Filter Landsat Metadata CSV files'),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
+        '--example', default=False, action="store_true",
+        help='Filter CSV files for example', )
+    parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action="store_const", dest="loglevel")
     args = parser.parse_args()
@@ -96,4 +108,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main()
+    main(csv_ws=os.getcwd(), example_flag=args.example)
