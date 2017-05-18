@@ -12,6 +12,12 @@ except ImportError:
 def main(csv_ws, overwrite_flag=False):
     """Download Landsat bulk metadata CSV files
 
+    Main Landsat Bulk Metadata Site
+    https://landsat.usgs.gov/download-entire-collection-metadata
+
+    Example CSV download URL
+    https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files/LANDSAT_TM-1980-1989.csv
+
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
         overwrite_flag (bool): if True, overwrite existing CSV files
@@ -53,6 +59,10 @@ def main(csv_ws, overwrite_flag=False):
         except Exception as e:
             logging.info('  {}\n  Try manually checking the bulk metadata '
                          'site\n'.format(e))
+            try:
+                os.remove(csv_path)
+            except:
+                pass
         # urlrequest.urlretrieve(csv_url, csv_path)
 
 

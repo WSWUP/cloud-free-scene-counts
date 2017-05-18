@@ -133,8 +133,14 @@ def main(csv_ws, output_folder, skip_list_path=None,
         csv_path = os.path.join(csv_ws, csv_name)
 
         # Read in the CSV, remove extra columns
-        input_df = pd.read_csv(
-            csv_path, usecols=input_cols, parse_dates=[date_col])
+        try:
+            input_df = pd.read_csv(
+                csv_path, usecols=input_cols, parse_dates=[date_col])
+        except Exception as e:
+            logging.warning(
+                '  CSV file could not be read or does not exist, skipping')
+            logging.debug('  Exception: {}'.format(e))
+            continue
         logging.debug('  Fields: {}'.format(', '.join(input_df.columns.values)))
         # logging.debug(input_df.head())
         logging.debug('  Initial scene count: {}'.format(len(input_df)))

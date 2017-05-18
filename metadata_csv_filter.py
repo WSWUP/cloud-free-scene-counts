@@ -52,7 +52,13 @@ def main(csv_ws, example_flag=False):
         csv_path = os.path.join(csv_ws, csv_name)
 
         # Read in the CSV
-        input_df = pd.read_csv(csv_path, parse_dates=[date_col])
+        try:
+            input_df = pd.read_csv(csv_path, parse_dates=[date_col])
+        except Exception as e:
+            logging.warning(
+                '  CSV file could not be read or does not exist, skipping')
+            logging.debug('  Exception: {}'.format(e))
+            continue
 
         # parse_dates=[date_col]
         # logging.debug('  {}'.format(', '.join(input_df.columns.values)))
