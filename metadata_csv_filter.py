@@ -6,7 +6,17 @@ import pandas as pd
 
 
 def main(csv_ws, example_flag=False):
-    """Filter Landsat Bulk Metadata CSV files
+    """Filter Landsat Collection 1 bulk metadata CSV files
+
+    The following filtering will be applied:
+    Remove extreme latitute images (remove row < 100 or row > 9)
+    Remove nighttime images (remove sun_elevation < 0)
+    Remove all images outside the CONUS
+        Remove path < 10, path > 48, row < 25 or row > 43
+        This is currently hardcoded in the script with "conus_flag = True"
+
+    If example_flag is True:
+    Only keep images in path/row 43/30 for 2000 and 2015.
 
     Args:
         csv_ws (): workspace of the Landsat bulk metadata CSV files
@@ -16,14 +26,10 @@ def main(csv_ws, example_flag=False):
 
     conus_flag = True
 
-    csv_list = [
-        'LANDSAT_8.csv',
-        'LANDSAT_ETM.csv',
-        'LANDSAT_ETM_SLC_OFF.csv',
-        'LANDSAT_TM-1980-1989.csv',
-        'LANDSAT_TM-1990-1999.csv',
-        'LANDSAT_TM-2000-2009.csv',
-        'LANDSAT_TM-2010-2012.csv'
+    csv_file_list = [
+        'LANDSAT_8_C1.csv',
+        'LANDSAT_ETM_C1.csv',
+        'LANDSAT_TM_C1.csv'
     ]
 
     # Input fields
@@ -47,7 +53,7 @@ def main(csv_ws, example_flag=False):
         'sceneStartTime', 'sunElevation', 'sunAzimuth']
         # 'UTM_ZONE', 'IMAGE_QUALITY', available_col, 'satelliteNumber']
 
-    for csv_name in csv_list:
+    for csv_name in csv_file_list:
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_ws, csv_name)
 
@@ -90,15 +96,28 @@ def main(csv_ws, example_flag=False):
         input_df = input_df[input_df['sunElevation'] > 0]
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
+        # Drop fields
+        # input_df.drop(browse_col, axis=1, inplace=True)
+
         # Save to CSV
         input_df.to_csv(csv_path, index=None)
+
+
+def is_valid_folder(parser, arg):
+    if not os.path.isdir(arg):
+        parser.error('The folder {} does not exist!'.format(arg))
+    else:
+        return arg
 
 
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description=('Filter Landsat Metadata CSV files'),
+        description=('Filter Landsat Collection 1 bulk metadata CSV files'),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument(
+        '--csv', type=lambda x: is_valid_folder(parser, x),
+        default=os.getcwd(), help='Landsat bulk metadata CSV folder')
     parser.add_argument(
         '--example', default=False, action="store_true",
         help='Filter CSV files for example', )
@@ -106,6 +125,11 @@ def arg_parse():
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action="store_const", dest="loglevel")
     args = parser.parse_args()
+
+    if args.csv and os.path.isfile(os.path.abspath(args.csv)):
+        args.csv = os.path.abspath(args.csv)
+    # else:
+    #     args.csv = get_csv_path(os.getcwd())
     return args
 
 
@@ -114,4 +138,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_ws=os.getcwd(), example_flag=args.example)
+    main(csv_ws=args.csv, example_flag=args.example)

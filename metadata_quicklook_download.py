@@ -16,7 +16,7 @@ import pandas as pd
 
 def main(csv_ws, output_folder, skip_list_path=None,
          overwrite_flag=False, example_flag=False):
-    """Download Landsat Quicklook images
+    """Download Landsat Collection 1 quicklook images
 
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
@@ -28,7 +28,7 @@ def main(csv_ws, output_folder, skip_list_path=None,
     Returns:
         None
     """
-    logging.info('\nDownload Landsat Quicklooks')
+    logging.info('\nDownload Landsat Collection 1 quicklooks')
     cloud_folder_name = 'cloudy'
 
     start_month = 1
@@ -48,11 +48,11 @@ def main(csv_ws, output_folder, skip_list_path=None,
         year_list = [2000, 2015]
         path_row_list = ['p043r030']
 
-    csv_list = [
-        'LANDSAT_8.csv',
-        'LANDSAT_ETM.csv', 'LANDSAT_ETM_SLC_OFF.csv',
-        'LANDSAT_TM-1980-1989.csv', 'LANDSAT_TM-1990-1999.csv',
-        'LANDSAT_TM-2000-2009.csv', 'LANDSAT_TM-2010-2012.csv']
+    csv_file_list = [
+        'LANDSAT_8_C1.csv',
+        'LANDSAT_ETM_C1.csv',
+        'LANDSAT_TM_C1.csv'
+    ]
 
     # Input fields
     browse_col = 'browseAvailable'
@@ -76,7 +76,7 @@ def main(csv_ws, output_folder, skip_list_path=None,
     path_row_col = 'PATH_ROW'
 
     # All other data types will be written to cloudy folder
-    data_types = ['L1T']
+    data_types = ['L1TP']
     # data_types = ['L1T', 'L1GT']
 
     # Force all values to be integers
@@ -126,9 +126,9 @@ def main(csv_ws, output_folder, skip_list_path=None,
             skip_list = [item.strip()[:16] for item in skip_list]
 
 
-    logging.info('\nReading Metadata CSV files')
+    logging.info('\nReading metadata CSV files')
     download_list = []
-    for csv_name in csv_list:
+    for csv_name in csv_file_list:
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_ws, csv_name)
 
@@ -238,7 +238,7 @@ def main(csv_ws, output_folder, skip_list_path=None,
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
-                logging.info('  {} - not L1T, downloading to cloudy'.format(
+                logging.info('  {} - not L1TP, downloading to cloudy'.format(
                     scene_id))
 
             # Try downloading scenes in skip list to cloudy folder
@@ -273,23 +273,45 @@ def main(csv_ws, output_folder, skip_list_path=None,
             os.makedirs(cloud_folder)
 
         # Trying to catch errors when the bulk metadata site is down
-        try:
-            with urlrequest.urlopen(image_url) as response:
-                logging.debug('  Response')
-                with open(image_path, 'wb') as out_file:
-                    logging.debug('  Open')
-                    shutil.copyfileobj(response, out_file)
-        except Exception as e:
-            logging.info('  {}\n  Try manually checking the bulk metadata '
-                         'site\n'.format(e))
-        # urlrequest.urlretrieve(image_url, image_path)
+        download_file(image_url, image_path)
+
+
+def download_file(file_url, file_path):
+    """"""
+    logging.debug('  Downloading file')
+    logging.debug('  {}'.format(file_url))
+    try:
+        with urlrequest.urlopen(file_url) as response:
+            with open(file_path, 'wb') as output_f:
+                shutil.copyfileobj(response, output_f)
+    except Exception as e:
+        logging.info('  {}\n  Try manually checking the bulk metadata '
+                     'website\n'.format(e))
+    # urlrequest.urlretrieve(file_url, file_path)
+
+
+# def get_csv_path(workspace):
+#     import Tkinter, tkFileDialog
+#     root = Tkinter.Tk()
+#     ini_path = tkFileDialog.askopenfilename(
+#         initialdir=workspace, parent=root, filetypes=[('XML files', '.xml')],
+#         title='Select the target XML file')
+#     root.destroy()
+#     return ini_path
+
+
+def is_valid_folder(parser, arg):
+    if not os.path.isdir(arg):
+        parser.error('The folder {} does not exist!'.format(arg))
+    else:
+        return arg
 
 
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description=('Download Landsat Quicklook images\n' +
-                     'Beware that many values are hardcoded!'),
+        description=('Download Landsat Collection 1 quicklook images\n' +
+                     'Beware that many script parameters are hardcoded.'),
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--csv', type=lambda x: is_valid_folder(parser, x),
@@ -314,23 +336,6 @@ def arg_parse():
     if os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
     return args
-
-
-# def get_csv_path(workspace):
-#     import Tkinter, tkFileDialog
-#     root = Tkinter.Tk()
-#     ini_path = tkFileDialog.askopenfilename(
-#         initialdir=workspace, parent=root, filetypes=[('XML files', '.xml')],
-#         title='Select the target XML file')
-#     root.destroy()
-#     return ini_path
-
-
-def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
-        parser.error('The folder {} does not exist!'.format(arg))
-    else:
-        return arg
 
 
 if __name__ == '__main__':

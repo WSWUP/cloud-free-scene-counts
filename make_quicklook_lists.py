@@ -39,17 +39,23 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
     path_list = []
     row_list = []
 
+    quicklook_re = re.compile(
+        '(?P<year>\d{4})_(?P<doy>\d{3})_(?P<landsat>\w{3}).jpg')
+
+
+
     # Force path, row, and year list values to integer type
+    # Create empty list if the list wasn't declared above
     try:
-        path_list = map(int, path_list)
+        path_list = list(map(int, path_list))
     except:
         path_list = []
     try:
-        row_list = map(int, row_list)
+        row_list = list(map(int, row_list))
     except:
         row_list = []
     try:
-        year_list = map(int, year_list)
+        year_list = list(map(int, year_list))
     except:
         year_list = []
 
@@ -88,7 +94,7 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
             continue
 
         path, row, year = map(int, pr_match.groups()[:3])
-        path_row = 'p{:02d}r{:02d}'.format(path, row)
+        path_row = 'p{:03d}r{:03d}'.format(path, row)
 
         # Skip scenes first by path/row
         if path_row_list and path_row not in path_row_list:
@@ -107,14 +113,12 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
             logging.info('{}'.format(root))
 
         for name in files:
-            # if name == 'Thumbs.db':
-            #     continue
             try:
-                y, d, l = os.path.splitext(name)[0].split('_')
+                year, doy, landsat = quicklook_re.match(name).groups()
             except:
                 continue
             scene_id = '{}{:03d}{:03d}{:04d}{:03d}'.format(
-                l, path, row, int(y), int(d))
+                landsat, path, row, int(year), int(doy))
             if input_skip_list and scene_id in input_skip_list:
                 logging.debug('  {} - skip list, skipping'.format(
                     scene_id))
@@ -122,10 +126,10 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
 
             if pr_match.groups()[3]:
                 logging.debug('  {} - skip'.format(scene_id))
-                output_skip_list.append([y, d, scene_id])
+                output_skip_list.append([year, doy, scene_id])
             else:
                 logging.debug('  {} - keep'.format(scene_id))
-                output_keep_list.append([y, d, scene_id])
+                output_keep_list.append([year, doy, scene_id])
 
     if output_keep_list:
         with open(output_keep_path, 'w') as output_f:
@@ -146,11 +150,11 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
         for year, doy, scene in sorted(output_keep_list):
             path_row = 'p{}r{}'.format(scene[4:6], scene[7:9])
             output_dt = dt.datetime.strptime(
-                '{}_{}'.format(year, doy), '%Y_%j')
+                '{}_{:03d}'.format(year, int(doy)), '%Y_%j')
             try:
-                counts[path_row][year][str(output_dt.month)] += 1
-            except:
-                counts[path_row][year] = {str(m): 0 for m in range(1, 13)}
+                counts[path_row][year][output_dt.month] += 1
+            except Exception as e:
+                counts[path_row][year] = {m: 0 for m in range(1, 13)}
 
         with open(summary_path, 'w') as output_f:
             output_f.write('{},{},{}\n'.format(

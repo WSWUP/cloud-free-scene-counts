@@ -1,7 +1,10 @@
 # Python specific
 *.pyc
 
-# Full bulk metadata CSV files
+# All bulk metadata GZ files
+*.gz
+
+# Full original bulk metadata CSV files
 /LANDSAT_8.csv
 /LANDSAT_ETM_SLC_OFF.csv
 /LANDSAT_ETM.csv
@@ -10,6 +13,11 @@
 /LANDSAT_TM-2000-2009.csv
 /LANDSAT_TM-2010-2012.csv
 
-# Example quicklooks
+# Full collection 1 bulk metadata CSV files
+/LANDSAT_8_CM.csv
+/LANDSAT_ETM_CM.csv
+/LANDSAT_TM_CM.csv
+
+# Example quicklooks (for now)
 example/*/*/*.jpg
 example/*/*/*/*.jpg

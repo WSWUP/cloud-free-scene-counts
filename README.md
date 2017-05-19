@@ -56,3 +56,9 @@ From the command prompt, enter the following command:
 ```
 python make_quicklook_lists.py
 ```
+
+#### Landsat Scene ID
+
+We are deliberately using a "shortened" Landsat scene ID that doesn't include the download station or version number.  For example the original Landsat scene ID LT50430302000288XXX02 is saved in the output files as LT50430302000288.  This was original done since there could be duplicate images in Earth Engine (same path, row, date but different download stations or versions).
+
+It is likely that we will move back to the full Landsat scene ID or switch to using the new Collection 1 scene IDs instead.
