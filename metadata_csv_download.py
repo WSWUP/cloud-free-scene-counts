@@ -3,10 +3,11 @@ import gzip
 import logging
 import os
 import shutil
-# Python 2/3 support
 try:
+    # Python 3
     import urllib.request as urlrequest
 except ImportError:
+    # Python 2
     import urllib as urlrequest
 
 
@@ -60,7 +61,7 @@ def main(csv_ws, overwrite_flag=False):
                 continue
 
         # Trying to catch errors when the bulk metadata site is down
-        download_gz(file_url, gz_path)
+        download_file(file_url, gz_path)
 
         # Unpack the CSV gz file
         decompress_gz(gz_path, csv_path)
@@ -70,10 +71,11 @@ def download_file(file_url, file_path):
     """"""
     logging.debug('  Downloading file')
     logging.debug('  {}'.format(file_url))
+    # with urlrequest.urlopen(file_url) as response notation fails in Python 2
     try:
-        with urlrequest.urlopen(file_url) as response:
-            with open(file_path, 'wb') as output_f:
-                shutil.copyfileobj(response, output_f)
+        response = urlrequest.urlopen(file_url)
+        with open(file_path, 'wb') as output_f:
+            shutil.copyfileobj(response, output_f)
     except Exception as e:
         logging.info('  {}\n  Try manually checking the bulk metadata '
                      'website\n'.format(e))
