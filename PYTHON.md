@@ -45,25 +45,28 @@ To change to the cloud free scene counts folder, assuming you installed it in yo
 The python scripts have additional arguments that can be set from the command line.  To view these options, run the script with the "-h" argument.
 
 ```
-python metadata_csv_image_download.py -h
+python metadata_quicklook_download.py -h
 
-usage: metadata_csv_image_download.py [-h] [--csv CSV] [--output OUTPUT]
+usage: metadata_quicklook_download.py [-h] [--csv CSV] [--output OUTPUT]
+                                      [-pr pXXXrYYY [pXXXrYYY ...]]
                                       [--skiplist SKIPLIST] [-o] [-d]
 
-Download Landsat Quicklook images Beware that many values are hardcoded!
+Download Landsat Collection 1 quicklook images Beware that many script
+parameters are hardcoded.
 
 optional arguments:
-  -h, --help           show this help message and exit
-  --csv CSV            Landsat bulk metadata CSV folder
-                       (default: D:\Projects\cloud-free-scene-counts)
-  --output OUTPUT      Output folder
-                       (default: D:\Projects\Projects\cloud-free-scene-counts)
-  --skiplist SKIPLIST  Skips files in skip list (default: None)
-  -o, --overwrite      Include existing scenes in scene download list
-                       (default: False)
-  -d, --debug          Debug level logging (default: 20)
-
-
+  -h, --help            show this help message and exit
+  --csv CSV             Landsat bulk metadata CSV folder (default:
+                        D:\Projects\Inyo\cloud-free-scene-counts)
+  --output OUTPUT       Output folder (default: D:\Projects\Inyo\cloud-free-
+                        scene-counts)
+  -pr pXXXrYYY [pXXXrYYY ...], --pathrows pXXXrYYY [pXXXrYYY ...]
+                        Space separated string of Landsat path/rows to
+                        download (i.e. -pr p043r032 p043r033) (default: None)
+  --skiplist SKIPLIST   Skips files in skip list (default: None)
+  -o, --overwrite       Include existing scenes in scene download list
+                        (default: False)
+  -d, --debug           Debug level logging (default: 20)
 ```
 
 #### Style Guide

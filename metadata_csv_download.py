@@ -127,7 +127,7 @@ def arg_parse():
         help='Force overwrite of existing files')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
-        help='Debug level logging', action="store_const", dest="loglevel")
+        help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
     if args.csv and os.path.isfile(os.path.abspath(args.csv)):

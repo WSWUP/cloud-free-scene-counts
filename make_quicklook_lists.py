@@ -8,16 +8,17 @@ import re
 import sys
 
 
-def main(quicklook_folder, output_folder, skip_list_path=None):
+def main(quicklook_folder, output_folder, path_row_list=[],
+         skip_list_path=None):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Args:
-        quicklook_folder: folder path
-        output_folder: folder path to save skip list
+        quicklook_folder (str): folder path
+        output_folder (str): folder path to save skip list
+        path_row_list (list): list of Landsat path/rows to process
+            Example: ['p043r032', 'p043r033']
+            Default is []
         skip_list_path (str): file path of Landsat skip list
-
-    Returns:
-        None
     """
     logging.info('\nMake skip & keep lists from quicklook images')
 
@@ -35,35 +36,19 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
     year_list = list(range(1984, dt.datetime.now().year + 1))
     # year_list = [2015]
 
-    path_row_list = []
+    # Additional/custom path/row filtering can be hardcoded
+    # path_row_list = []
     path_list = []
     row_list = []
 
     quicklook_re = re.compile(
         '(?P<year>\d{4})_(?P<doy>\d{3})_(?P<landsat>\w{3}).jpg')
+    path_row_fmt = 'p{:03d}r{:03d}'
+    # path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
-
-
-    # Force path, row, and year list values to integer type
-    # Create empty list if the list wasn't declared above
-    try:
-        path_list = list(map(int, path_list))
-    except:
-        path_list = []
-    try:
-        row_list = list(map(int, row_list))
-    except:
-        row_list = []
-    try:
-        year_list = list(map(int, year_list))
-    except:
-        year_list = []
-
-    # Create path/row list if it wasn't declared above
-    # try:
-    #     path_row_list = path_row_list[:]
-    # except:
-    #     path_row_list = []
+    # Setup and validate the path/row lists
+    path_row_list, path_list, row_list = check_path_rows(
+        path_row_list, path_list, row_list)
 
     # Error checking
     if not os.path.isdir(output_folder):
@@ -94,7 +79,7 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
             continue
 
         path, row, year = map(int, pr_match.groups()[:3])
-        path_row = 'p{:03d}r{:03d}'.format(path, row)
+        path_row = path_row_fmt.format(path, row)
 
         # Skip scenes first by path/row
         if path_row_list and path_row not in path_row_list:
@@ -167,6 +152,58 @@ def main(quicklook_folder, output_folder, skip_list_path=None):
                             str(c) for m, c in sorted(month_counts.items())])))
 
 
+def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
+    """Setup path/row lists"""
+    path_row_fmt = 'p{:03d}r{:03d}'
+    path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+
+    # Force path/row list to zero padded three digit numbers
+    if path_row_list:
+        path_row_list = sorted([
+            path_row_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
+            for pr in path_row_list
+            for m in [path_row_re.match(pr)] if m])
+
+    # If path_list and row_list were specified, force to integer type
+    # Declare variable as an empty list if it does not exist
+    try:
+        path_list = list(sorted(map(int, path_list)))
+    except ValueError:
+        logging.error(
+            '\nERROR: The path list could not be converted to integers, '
+            'exiting\n  {}'.format(path_list))
+        sys.exit()
+    try:
+        row_list = list(sorted(map(int, row_list)))
+    except ValueError:
+        logging.error(
+            '\nERROR: The row list could not be converted to integers, '
+            'exiting\n  {}'.format(row_list))
+        sys.exit()
+
+    # Convert path_row_list to path_list and row_list if not set
+    # Pre-filtering on path and row separately is faster than building path_row
+    # This is a pretty messy way of doing this...
+    if path_row_list and not path_list:
+        path_list = sorted(list(set([
+            int(path_row_re.match(pr).group('PATH'))
+            for pr in path_row_list if path_row_re.match(pr)])))
+    if path_row_list and not row_list:
+        row_list = sorted(list(set([
+            int(path_row_re.match(pr).group('ROW'))
+            for pr in path_row_list if path_row_re.match(pr)])))
+    if path_list:
+        logging.debug('  Paths: {}'.format(
+            ' '.join(list(map(str, path_list)))))
+    if row_list:
+        logging.debug('  Rows: {}'.format(' '.join(list(map(str, row_list)))))
+    if path_row_list:
+        logging.debug('  Path/Rows: {}'.format(
+            ' '.join(list(map(str, path_row_list)))))
+
+    return path_row_list, path_list, row_list
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
@@ -180,10 +217,14 @@ def arg_parse():
     parser.add_argument(
         '--output', default=os.getcwd(), help='Output folder')
     parser.add_argument(
+        '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
+        help=('Space separated string of Landsat path/rows to keep '
+              '(i.e. -pr p043r032 p043r033)'))
+    parser.add_argument(
         '--skiplist', default=None, help='Skips files in skip list')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
-        help='Debug level logging', action="store_const", dest="loglevel")
+        help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
     if args.quicklook and os.path.isfile(os.path.abspath(args.quicklook)):
@@ -205,4 +246,4 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(quicklook_folder=args.quicklook, output_folder=args.output,
-         skip_list_path=args.skiplist)
+         path_row_list=args.pathrows, skip_list_path=args.skiplist)

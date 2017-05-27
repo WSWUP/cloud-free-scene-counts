@@ -25,15 +25,21 @@ python metadata_csv_download.py
 
 ## Filter/reduce Landsat Bulk Metadata CSV files
 
-The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  If the "--filter_conus" command line argument is used (see below), all non-CONUS Landsat path/rows will be removed from the metadata.  Additional filtering can also be manually added to this script.
+The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  If the "--conus" command line argument is used (see below), all non-CONUS Landsat path/rows will be removed from the metadata.
 
 ```
-python metadata_csv_filter.py --filter_conus
+python metadata_csv_filter.py --conus
+```
+
+Path/row specific filtering can also be applied using the "-pr" or "--pathrows" argument.
+
+```
+python metadata_csv_filter.py -pr p043r032 p043r33
 ```
 
 ## Download Landsat Quicklooks
 
-The Landsat quicklook images can be downloaded using the provided script "metadata_csv_image_download.py".  The script will download the quicklooks into separate folders by path/row and year.  Any images that are not L1T (fully georectified) will be automatically moved into a "cloudy" folder within that year.
+The Landsat quicklook images can be downloaded using the provided script "metadata_csv_image_download.py".  The script will download the quicklooks into separate folders by path/row and year.  Any images that are not L1TP (fully georectified) will be automatically moved into a "cloudy" folder within that year.
 
 From the command prompt, change directory into the quicklooks folder, then enter the following command, where FOLDER is the path to the folder containing the bulk metadata CSV files.  If "--csv" is not set, the script will attempt to use the current working directory.
 ```

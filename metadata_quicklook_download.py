@@ -14,16 +14,22 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, skip_list_path=None,
-         overwrite_flag=False, example_flag=False):
+def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
+         example_flag=False, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
+
+    Additional filtering can be manually specified in the script
 
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
         output_folder (str): folder path
+        path_row_list (list): list of Landsat path/rows to process
+            Example: ['p043r032', 'p043r033']
+            Default is []
         skip_list_path (str): file path of Landsat skip list
+        example_flag (bool): if True, filter CSV files for example.
+            Only keep images in path/row 43/30 for 2000 and 2015.
         overwrite_flag (bool): if True, overwrite existing files
-        example_flag (bool): if True, filter CSV files for example
 
     Returns:
         None
@@ -38,21 +44,23 @@ def main(csv_ws, output_folder, skip_list_path=None,
     year_list = list(range(1984, dt.datetime.now().year + 1))
     # year_list = []
 
-    # Custom path/row filtering can be applied here
-    path_row_list = []
+    # Additional/custom path/row filtering can be hardcoded
+    # path_row_list = []
     path_list = []
     row_list = []
 
     # Filter CSVs for example
     if example_flag:
-        year_list = [2000, 2015]
         path_row_list = ['p043r030']
+        year_list = [2000, 2015]
 
     csv_file_list = [
         'LANDSAT_8_C1.csv',
         'LANDSAT_ETM_C1.csv',
         'LANDSAT_TM_C1.csv'
     ]
+
+    path_row_fmt = 'p{:03d}r{:03d}'
 
     # Input fields
     browse_col = 'browseAvailable'
@@ -79,35 +87,9 @@ def main(csv_ws, output_folder, skip_list_path=None,
     data_types = ['L1TP']
     # data_types = ['L1T', 'L1GT']
 
-    # Force all values to be integers
-    try:
-        path_row_list = path_row_list[:]
-    except:
-        path_row_list = []
-    try:
-        path_list = list(map(int, path_list))
-    except:
-        path_list = []
-    try:
-        row_list = list(map(int, row_list))
-    except:
-        row_list = []
-    try:
-        year_list = list(map(int, year_list))
-    except:
-        year_list = []
-
-    # Convert path_row_list to path_list and row_list if not set
-    # This is a pretty messy way of doing this...
-    path_row_re = re.compile('p(?P<PATH>\d{2,3})r(?P<ROW>\d{2,3})')
-    if path_row_list and not path_list:
-        path_list = sorted(list(set([
-            int(path_row_re.match(pr).group('PATH'))
-            for pr in path_row_list if path_row_re.match(pr)])))
-    if path_row_list and not row_list:
-        row_list = sorted(list(set([
-            int(path_row_re.match(pr).group('ROW'))
-            for pr in path_row_list if path_row_re.match(pr)])))
+    # Setup and validate the path/row lists
+    path_row_list, path_list, row_list = check_path_rows(
+        path_row_list, path_list, row_list)
 
     # Error checking
     if not os.path.isdir(csv_ws):
@@ -151,17 +133,21 @@ def main(csv_ws, output_folder, skip_list_path=None,
         # Filter scenes first by path and row separately
         if path_list:
             logging.debug('  Filtering by path')
+            input_df = input_df[input_df[path_col] <= max(path_list)]
+            input_df = input_df[input_df[path_col] >= min(path_list)]
             input_df = input_df[input_df[path_col].isin(path_list)]
         if row_list:
             logging.debug('  Filtering by row')
+            input_df = input_df[input_df[row_col] <= max(row_list)]
+            input_df = input_df[input_df[row_col] >= min(row_list)]
             input_df = input_df[input_df[row_col].isin(row_list)]
 
         # Then filter by path/row combined
         try:
-            input_df['PATH_ROW'] = input_df[[path_col, row_col]].apply(
-                lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+            input_df[path_row_col] = input_df[[path_col, row_col]].apply(
+                lambda x: path_row_fmt.format(x[0], x[1]), axis=1)
         except ValueError:
-            logging.debug('  Possible empty DataFrame, skipping file')
+            logging.info('  Possible empty DataFrame, skipping file')
             continue
         if path_row_list:
             logging.debug('  Filtering by path/row')
@@ -276,14 +262,67 @@ def main(csv_ws, output_folder, skip_list_path=None,
         download_file(image_url, image_path)
 
 
+def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
+    """Setup path/row lists"""
+    path_row_fmt = 'p{:03d}r{:03d}'
+    path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+
+    # Force path/row list to zero padded three digit numbers
+    if path_row_list:
+        path_row_list = sorted([
+            path_row_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
+            for pr in path_row_list
+            for m in [path_row_re.match(pr)] if m])
+
+    # If path_list and row_list were specified, force to integer type
+    # Declare variable as an empty list if it does not exist
+    try:
+        path_list = list(sorted(map(int, path_list)))
+    except ValueError:
+        logging.error(
+            '\nERROR: The path list could not be converted to integers, '
+            'exiting\n  {}'.format(path_list))
+        sys.exit()
+    try:
+        row_list = list(sorted(map(int, row_list)))
+    except ValueError:
+        logging.error(
+            '\nERROR: The row list could not be converted to integers, '
+            'exiting\n  {}'.format(row_list))
+        sys.exit()
+
+    # Convert path_row_list to path_list and row_list if not set
+    # Pre-filtering on path and row separately is faster than building path_row
+    # This is a pretty messy way of doing this...
+    if path_row_list and not path_list:
+        path_list = sorted(list(set([
+            int(path_row_re.match(pr).group('PATH'))
+            for pr in path_row_list if path_row_re.match(pr)])))
+    if path_row_list and not row_list:
+        row_list = sorted(list(set([
+            int(path_row_re.match(pr).group('ROW'))
+            for pr in path_row_list if path_row_re.match(pr)])))
+    if path_list:
+        logging.debug('  Paths: {}'.format(
+            ' '.join(list(map(str, path_list)))))
+    if row_list:
+        logging.debug('  Rows: {}'.format(' '.join(list(map(str, row_list)))))
+    if path_row_list:
+        logging.debug('  Path/Rows: {}'.format(
+            ' '.join(list(map(str, path_row_list)))))
+
+    return path_row_list, path_list, row_list
+
+
 def download_file(file_url, file_path):
     """"""
     logging.debug('  Downloading file')
     logging.debug('  {}'.format(file_url))
+    # with urlrequest.urlopen(file_url) as response notation fails in Python 2
     try:
-        with urlrequest.urlopen(file_url) as response:
-            with open(file_path, 'wb') as output_f:
-                shutil.copyfileobj(response, output_f)
+        response = urlrequest.urlopen(file_url)
+        with open(file_path, 'wb') as output_f:
+            shutil.copyfileobj(response, output_f)
     except Exception as e:
         logging.info('  {}\n  Try manually checking the bulk metadata '
                      'website\n'.format(e))
@@ -320,13 +359,20 @@ def arg_parse():
         '--output', default=os.getcwd(), help='Output folder')
     #     '--output', default=sys.path[0], help='Output folder')
     parser.add_argument(
+        '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
+        help=('Space separated string of Landsat path/rows to download '
+              '(i.e. -pr p043r032 p043r033)'))
+    parser.add_argument(
         '--skiplist', default=None, help='Skips files in skip list')
     parser.add_argument(
-        '-o', '--overwrite', default=False, action="store_true",
+        '--example', default=False, action='store_true',
+        help='Filter CSV files for example')
+    parser.add_argument(
+        '-o', '--overwrite', default=False, action='store_true',
         help='Include existing scenes in scene download list')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
-        help='Debug level logging', action="store_const", dest="loglevel")
+        help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
     if args.csv and os.path.isfile(os.path.abspath(args.csv)):
@@ -350,4 +396,5 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_ws=args.csv, output_folder=args.output,
-         skip_list_path=args.skiplist, overwrite_flag=args.overwrite)
+         path_row_list=args.pathrows, skip_list_path=args.skiplist,
+         example_flag=args.example, overwrite_flag=args.overwrite)
