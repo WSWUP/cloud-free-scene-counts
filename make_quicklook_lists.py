@@ -68,17 +68,22 @@ def main(quicklook_folder, output_folder, path_row_list=[],
     output_keep_list = []
     output_skip_list = []
     for root, dirs, files in os.walk(quicklook_folder):
+        # This should only match path/row folders directly in quicklook folder
         # DEADBEEF: Need better cross platform solution
         if os.name == 'nt':
             pr_match = re.search(
-                'p(\d{3})r(\d{3})\\\(\d{4})(\\\%s)?' % cloud_folder, root)
+                '{}\\\p(\d{{3}})r(\d{{3}})\\\(\d{{4}})(\\\{})?'.format(
+                    os.path.basename(quicklook_folder), cloud_folder),
+                root)
         elif os.name == 'posix':
             pr_match = re.search(
-                'p(\d{3})r(\d{3})/(\d{4})(/%s)?' % cloud_folder, root)
+                '{}/p(\d{{3}})r(\d{{3}})/(\d{{4}})(/{})?'.format(
+                    os.path.basename(quicklook_folder), cloud_folder),
+                root)
         if not pr_match:
             continue
 
-        path, row, year = map(int, pr_match.groups()[:3])
+        path, row, year = list(map(int, pr_match.groups()[:3]))
         path_row = path_row_fmt.format(path, row)
 
         # Skip scenes first by path/row
