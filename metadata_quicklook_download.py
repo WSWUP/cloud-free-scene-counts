@@ -14,8 +14,8 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
-         example_flag=False, overwrite_flag=False):
+def main(csv_ws, output_folder, path_row_list=[], months='',
+         skip_list_path=None, example_flag=False, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
     Additional filtering can be manually specified in the script
@@ -23,9 +23,12 @@ def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
         output_folder (str): folder path
-        path_row_list (list): list of Landsat path/rows to process
+        path_row_list (list): Download images for specified Landsat path/rows.
             Example: ['p043r032', 'p043r033']
-            Default is []
+            Default is [] which will download all images in metadata CSV
+        months (str): Comma separated values or ranges of months to download.
+            Example: '1, 2, 3-5'
+            Default is '' which will download images for all months
         skip_list_path (str): file path of Landsat skip list
         example_flag (bool): if True, filter CSV files for example.
             Only keep images in path/row 43/30 for 2000 and 2015.
@@ -37,12 +40,11 @@ def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
     logging.info('\nDownload Landsat Collection 1 quicklooks')
     cloud_folder_name = 'cloudy'
 
-    start_month = 1
-    end_month = 12
-
     # Custom year filtering can be applied here
     year_list = list(range(1984, dt.datetime.now().year + 1))
     # year_list = []
+
+    month_list = sorted(list(parse_int_set(months)))
 
     # Additional/custom path/row filtering can be hardcoded
     # path_row_list = []
@@ -159,12 +161,15 @@ def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
             input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
 
         # Skip early/late months
-        if start_month:
-            logging.debug('  Filtering by start month')
-            input_df[input_df[date_col].dt.month >= start_month]
-        if end_month:
-            logging.debug('  Filtering by end month')
-            input_df[input_df[date_col].dt.month <= end_month]
+        if month_list:
+            logging.debug('  Filtering by month')
+            input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
+        # if start_month:
+        #     logging.debug('  Filtering by start month')
+        #     input_df = input_df[input_df[date_col].dt.month >= start_month]
+        # if end_month:
+        #     logging.debug('  Filtering by end month')
+        #     input_df = input_df[input_df[date_col].dt.month <= end_month]
 
         # Skip scenes that don't have a browse image
         if browse_col in input_df.columns.values:
@@ -180,7 +185,7 @@ def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
         for row_index, row_df in input_df.iterrows():
             # logging.debug(row_df)
             scene_id = row_df[scene_col]
-            logging.debug('  {}'.format(scene_id))
+            # logging.debug('  {}'.format(scene_id))
             image_dt = row_df[date_col].to_pydatetime()
             # sensor = row_dict[sensor_col].upper()
             # path = int(row_df[path_col])
@@ -241,6 +246,7 @@ def main(csv_ws, output_folder, path_row_list=[], skip_list_path=None,
                 continue
 
             # Save download URL and save path
+            logging.debug('  {}'.format(scene_id))
             download_list.append([image_path, row_df[url_col]])
 
     # Download Landsat Look Images
@@ -346,6 +352,39 @@ def is_valid_folder(parser, arg):
         return arg
 
 
+def parse_int_set(nputstr=""):
+    """Return list of numbers given a string of ranges
+
+    http://thoughtsbyclayg.blogspot.com/2008/10/parsing-list-of-numbers-in-python.html
+    """
+    selection = set()
+    invalid = set()
+    # tokens are comma seperated values
+    tokens = [x.strip() for x in nputstr.split(',')]
+    for i in tokens:
+        try:
+            # typically tokens are plain old integers
+            selection.add(int(i))
+        except:
+            # if not, then it might be a range
+            try:
+                token = [int(k.strip()) for k in i.split('-')]
+                if len(token) > 1:
+                    token.sort()
+                    # we have items seperated by a dash
+                    # try to build a valid range
+                    first = token[0]
+                    last = token[len(token) - 1]
+                    for x in range(first, last + 1):
+                        selection.add(x)
+            except:
+                # not an int and not a range...
+                invalid.add(i)
+    # Report invalid tokens before returning valid selection
+    # print "Invalid set: " + str(invalid)
+    return selection
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
@@ -362,6 +401,10 @@ def arg_parse():
         '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
         help=('Space separated string of Landsat path/rows to download '
               '(i.e. -pr p043r032 p043r033)'))
+    parser.add_argument(
+        '-m', '--months', default='1-12', type=str,
+        help='Comma separated list or range of months to download'
+             '(i.e. "--months 1,2,3-5")')
     parser.add_argument(
         '--skiplist', default=None, help='Skips files in skip list')
     parser.add_argument(
@@ -396,5 +439,6 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_ws=args.csv, output_folder=args.output,
-         path_row_list=args.pathrows, skip_list_path=args.skiplist,
-         example_flag=args.example, overwrite_flag=args.overwrite)
+         path_row_list=args.pathrows, months=args.months,
+         skip_list_path=args.skiplist, example_flag=args.example,
+         overwrite_flag=args.overwrite)
