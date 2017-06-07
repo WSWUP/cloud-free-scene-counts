@@ -43,7 +43,7 @@ python ..\metadata_quicklook_download.py
 
 ## Generate Scene Counts and Clear/Cloudy Scene Lists
 
-Before identifying and sorting the cloudy quicklook images, generate an initial set of scene counts and scene ID lists using the following:
+Before identifying and sorting the cloudy quicklook images, generate an initial set of scene counts and product ID lists using the following:
 
 ```
 python ..\make_quicklook_lists.py
@@ -52,17 +52,17 @@ python ..\make_quicklook_lists.py
 The file "clear_scene_counts.txt" should look identical to the following:
 ```
 PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
-p43r30,2000,1,3,4,3,3,2,3,4,4,4,2,3
-p43r30,2015,2,3,3,3,4,4,4,4,2,3,2,3
+p043r030,2000,1,3,4,3,3,2,3,4,4,4,2,3
+p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 ```
 
 ## Sort Cloudy Landsat Quicklooks
 
-Try moving the 2000_288_LT5 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the scene ID LT50430302000288 has moved from clear_list.txt file to the skip_list.txt.
+Try moving the 2000_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the skip_list.txt.
 
 The scene count file should look identical to the following:
 ```
 PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
-p43r30,2000,1,3,4,3,3,2,3,4,4,3,2,3
-p43r30,2015,2,3,3,3,4,4,4,4,2,3,2,3
+p043r030,2000,1,3,4,3,3,2,3,4,4,3,2,3
+p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 ```

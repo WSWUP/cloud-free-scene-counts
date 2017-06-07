@@ -42,7 +42,7 @@ def main(quicklook_folder, output_folder, path_row_list=[],
     row_list = []
 
     quicklook_re = re.compile(
-        '(?P<year>\d{4})_(?P<doy>\d{3})_(?P<landsat>\w{3}).jpg')
+        '(?P<year>\d{4})_(?P<doy>\d{3})_(?P<landsat>\w{4}).jpg')
     path_row_fmt = 'p{:03d}r{:03d}'
     # path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
@@ -107,28 +107,31 @@ def main(quicklook_folder, output_folder, path_row_list=[],
                 year, doy, landsat = quicklook_re.match(name).groups()
             except:
                 continue
-            scene_id = '{}{:03d}{:03d}{:04d}{:03d}'.format(
-                landsat, path, row, int(year), int(doy))
-            if input_skip_list and scene_id in input_skip_list:
+            image_dt = dt.datetime.strptime('{}_{}'.format(year, doy), '%Y_%j')
+            product_id = '{}_{:03d}{:03d}_{}'.format(
+                landsat, path, row, image_dt.strftime('%Y%m%d'))
+            # scene_id = '{}{:03d}{:03d}{:04d}{:03d}'.format(
+            #     landsat, path, row, int(year), int(doy))
+            if input_skip_list and product_id in input_skip_list:
                 logging.debug('  {} - skip list, skipping'.format(
-                    scene_id))
+                    product_id))
                 continue
 
             if pr_match.groups()[3]:
-                logging.debug('  {} - skip'.format(scene_id))
-                output_skip_list.append([year, doy, scene_id])
+                logging.debug('  {} - skip'.format(product_id))
+                output_skip_list.append([year, doy, product_id])
             else:
-                logging.debug('  {} - keep'.format(scene_id))
-                output_keep_list.append([year, doy, scene_id])
+                logging.debug('  {} - keep'.format(product_id))
+                output_keep_list.append([year, doy, product_id])
 
     if output_keep_list:
         with open(output_keep_path, 'w') as output_f:
-            for year, doy, scene in sorted(output_keep_list):
-                output_f.write('{}\n'.format(scene))
+            for year, doy, product_id in sorted(output_keep_list):
+                output_f.write('{}\n'.format(product_id))
     if output_skip_list:
         with open(output_skip_path, 'w') as output_f:
-            for year, doy, scene in sorted(output_skip_list):
-                output_f.write('{}\n'.format(scene))
+            for year, doy, product_id in sorted(output_skip_list):
+                output_f.write('{}\n'.format(product_id))
 
     if summary_flag and output_keep_list:
         # This would probably be easier to do with pandas
@@ -137,8 +140,8 @@ def main(quicklook_folder, output_folder, path_row_list=[],
         # counts = nested_dict()
         counts = defaultdict(dict)
 
-        for year, doy, scene in sorted(output_keep_list):
-            path_row = 'p{}r{}'.format(scene[4:6], scene[7:9])
+        for year, doy, product_id in sorted(output_keep_list):
+            path_row = 'p{}r{}'.format(product_id[5:8], product_id[8:11])
             output_dt = dt.datetime.strptime(
                 '{}_{:03d}'.format(year, int(doy)), '%Y_%j')
             try:

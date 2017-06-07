@@ -49,7 +49,7 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
     # Input fields
     browse_col = 'browseAvailable'
     url_col = 'browseURL'
-    scene_col = 'sceneID'
+    product_col = 'LANDSAT_PRODUCT_ID'
     date_col = 'acquisitionDate'
     cloud_cover_col = 'cloudCover'
     path_col = 'path'
@@ -65,9 +65,10 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
 
     # Only load the following columns from the CSV
     use_cols = [
-        browse_col, url_col, scene_col, date_col, cloud_cover_col,
+        browse_col, url_col, product_col, date_col, cloud_cover_col,
         path_col, row_col, data_type_col, sensor_col, cloud_full_col,
-        'sceneStartTime', 'sunElevation', 'sunAzimuth']
+        'sceneStartTime', 'sunElevation', 'sunAzimuth',
+        'COLLECTION_NUMBER', 'COLLECTION_CATEGORY', 'CLOUD_COVER_LAND']
         # 'UTM_ZONE', 'IMAGE_QUALITY', available_col, 'satelliteNumber']
 
     # Setup and validate the path/row lists
@@ -136,7 +137,12 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
 
 
 def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
-    """Setup path/row lists"""
+    """Setup path/row lists
+
+    Populate the separate path and row lists from path_row_list
+    Filtering by path and row lists separately seems to be faster than 
+        creating a new path/row field and filtering directly
+    """
     path_row_fmt = 'p{:03d}r{:03d}'
     path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 

@@ -67,7 +67,7 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
     # Input fields
     browse_col = 'browseAvailable'
     url_col = 'browseURL'
-    scene_col = 'sceneID'
+    product_col = 'LANDSAT_PRODUCT_ID'
     # sensor_col = 'sensor'
     date_col = 'acquisitionDate'
     cloud_cover_col = 'cloudCover'
@@ -76,10 +76,13 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
     row_col = 'row'
     data_type_col = 'DATA_TYPE_L1'
     # available_col = 'L1_AVAILABLE'
+    # c1_number_col = 'COLLECTION_NUMBER'
+    # c1_category_col = 'COLLECTION_CATEGORY'
+    # cloud_cover_col = 'CLOUD_COVER_LAND'
 
     # Only load the following columns from the CSV
     input_cols = [
-        browse_col, url_col, scene_col, date_col, cloud_cover_col,
+        browse_col, url_col, product_col, date_col, cloud_cover_col,
         path_col, row_col, data_type_col]
 
     # Generated fields
@@ -184,8 +187,10 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
         # Each item is a "row" of data
         for row_index, row_df in input_df.iterrows():
             # logging.debug(row_df)
-            scene_id = row_df[scene_col]
-            # logging.debug('  {}'.format(scene_id))
+            product_id = row_df[product_col].split('_')
+            product_id = '_'.join([
+                product_id[0], product_id[2], product_id[3]])
+            logging.debug('  {}'.format(product_id))
             image_dt = row_df[date_col].to_pydatetime()
             # sensor = row_dict[sensor_col].upper()
             # path = int(row_df[path_col])
@@ -196,7 +201,7 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
             image_folder = os.path.join(
                 output_folder, row_df[path_row_col], str(image_dt.year))
             image_name = '{0}_{1}.jpg'.format(
-                image_dt.strftime('%Y_%j'), scene_id[:3])
+                image_dt.strftime('%Y_%j'), product_id[:4])
             image_path = os.path.join(image_folder, image_name)
 
             # "Cloudy" quicklooks are moved to a separate folder
@@ -206,23 +211,23 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
             # Remove exist
             if overwrite_flag:
                 if os.path.isfile(image_path):
-                    # logging.debug('  {} - removing'.format(scene_id))
+                    # logging.debug('  {} - removing'.format(product_id))
                     os.remove(image_path)
                 if os.path.isfile(cloud_path):
-                    # logging.debug('  {} - removing'.format(scene_id))
+                    # logging.debug('  {} - removing'.format(product_id))
                     os.remove(cloud_path)
             # Skip if file is already classified as cloud
             elif os.path.isfile(cloud_path):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
-                logging.debug('  {} - cloudy, skipping'.format(scene_id))
+                logging.debug('  {} - cloudy, skipping'.format(product_id))
                 continue
 
             # # Try downloading fully cloudy scenes to cloud folder
             # if int(row_dict[cloud_cover_col]) >= 9:
             #    image_path = cloud_path[:]
             #    logging.info('  {} - cloud_cover >= 9, downloading to cloudy'.format(
-            #         scene_id))
+            #         product_id))
 
             # Try downloading non-L1T quicklooks to the cloud folder
             if row_df[data_type_col].upper() not in data_types:
@@ -230,23 +235,23 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
                     os.remove(image_path)
                 image_path = cloud_path[:]
                 logging.info('  {} - not L1TP, downloading to cloudy'.format(
-                    scene_id))
+                    product_id))
 
             # Try downloading scenes in skip list to cloudy folder
-            if skip_list and scene_id[:16] in skip_list:
+            if skip_list and product_id[:20] in skip_list:
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
                 logging.info('  {} - skip list, downloading to cloudy'.format(
-                    scene_id))
+                    product_id))
 
             # Check if file exists last
             if os.path.isfile(image_path):
-                logging.debug('  {} - image exists, skipping'.format(scene_id))
+                logging.debug('  {} - image exists, skipping'.format(product_id))
                 continue
 
             # Save download URL and save path
-            logging.debug('  {}'.format(scene_id))
+            logging.debug('  {}'.format(product_id))
             download_list.append([image_path, row_df[url_col]])
 
     # Download Landsat Look Images

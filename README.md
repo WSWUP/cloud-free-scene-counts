@@ -1,13 +1,13 @@
 # Landsat Cloud Free Scene Count Tools
 
-The purpose of these tools is to identify the approximate number of cloud free Landsat images by month and generate lists of Landsat scene IDs that are "cloudy" and "clear".
+The purpose of these tools is to identify the approximate number of cloud free Landsat images by month and generate lists of Landsat collection 1 product identifiers that are "cloudy" and "clear".
 
 The general steps are:
 + Download the Landsat bulk metadata CSV files using the "metadata_csv_download.py" script
 + Filter the Landsat bulk metadata CSV files using the "metadata_csv_filter.py" script
 + Download the Landsat quicklook images by path/row and year using the "metadata_csv_image_download.py" script.
 + Manually sort/move the "cloudy" images into a separate "cloudy" folder for each year.
-+ Generate scene counts and scene ID lists using the "make_quicklook_lists.py" script.
++ Generate scene counts and product ID lists using the "make_quicklook_lists.py" script.
 
 ## Python Dependencies
 
@@ -56,15 +56,13 @@ After downloading the quicklook images, they need to be manually sorted to ident
 
 ## Generate Scene Counts and Clear/Cloudy Scene Lists
 
-The clear and cloudy scene ID lists can be generated either from the command prompt or by double clicking the "make_quicklook_lists.py" script.
+The clear and cloudy product ID lists can be generated either from the command prompt or by double clicking the "make_quicklook_lists.py" script.
 
 From the command prompt, enter the following command:
 ```
 python make_quicklook_lists.py
 ```
 
-#### Landsat Scene ID
+#### Landsat Product Identifier
 
-We are deliberately using a "shortened" Landsat scene ID that doesn't include the download station or version number.  For example the original Landsat scene ID LT50430302000288XXX02 is saved in the output files as LT50430302000288.  This was original done since there could be duplicate images in Earth Engine (same path, row, date but different download stations or versions).
-
-It is likely that we will move back to the full Landsat scene ID or switch to using the new Collection 1 scene IDs instead.
+We are deliberately using a "shortened" collection 1 product identifier to match the Earth Engine system index for the collection 1 images.  The ID doesn't include the processing correction level, processing date, collection number, or collection category.  For example the original Landsat product identifier LT05_L1TP_043030_20001014_20160922_01_T1 is saved in the output files as LT05_043030_20001014.  This is done since an image is "cloudy" even if the processing date or correction level changes.
