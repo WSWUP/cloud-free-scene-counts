@@ -14,7 +14,7 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, path_row_list=[], months='',
+def main(csv_ws, output_folder, path_row_list=[], years='', months='',
          skip_list_path=None, example_flag=False, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
@@ -26,8 +26,11 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
         path_row_list (list): Download images for specified Landsat path/rows.
             Example: ['p043r032', 'p043r033']
             Default is [] which will download all images in metadata CSV
+        years (str): Comma separated values or ranges of years to download.
+            Example: '1984,2000-2015'
+            Default is '' which will download images for all years
         months (str): Comma separated values or ranges of months to download.
-            Example: '1, 2, 3-5'
+            Example: '1,2,3-5'
             Default is '' which will download images for all months
         skip_list_path (str): file path of Landsat skip list
         example_flag (bool): if True, filter CSV files for example.
@@ -41,7 +44,8 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
     cloud_folder_name = 'cloudy'
 
     # Custom year filtering can be applied here
-    year_list = list(range(1984, dt.datetime.now().year + 1))
+    year_list = sorted(list(parse_int_set(years)))
+    # year_list = list(range(1984, dt.datetime.now().year + 1))
     # year_list = []
 
     month_list = sorted(list(parse_int_set(months)))
@@ -90,9 +94,9 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
     # Generated fields
     path_row_col = 'PATH_ROW'
 
-    # All other data types will be written to cloudy folder
+    # All other data types and categories will be written to cloudy folder
     data_types = ['L1TP']
-    # data_types = ['L1T', 'L1GT']
+    categories = ['T1', 'RT']
 
     # Setup and validate the path/row lists
     path_row_list, path_list, row_list = check_path_rows(
@@ -235,9 +239,9 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
             # if (row_df[data_type_col].upper() not in data_types or
             #         row_df[category_col].upper() != 'T1' or
             #         row_df[cloud_col] >= 90 or
-            #         row_df[sensor_col] != 'OLI'):
+            #         row_df[sensor_col].upper() != 'OLI'):
             if (row_df[data_type_col].upper() not in data_types or
-                    row_df[category_col].upper() != 'T1'):
+                    row_df[category_col].upper() not in categories):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
@@ -414,6 +418,10 @@ def arg_parse():
         help=('Space separated string of Landsat path/rows to download '
               '(i.e. -pr p043r032 p043r033)'))
     parser.add_argument(
+        '-y', '--years', default='1984-2017', type=str,
+        help='Comma separated list or range of years to download'
+             '(i.e. "--years 1984,2000-2015")')
+    parser.add_argument(
         '-m', '--months', default='1-12', type=str,
         help='Comma separated list or range of months to download'
              '(i.e. "--months 1,2,3-5")')
@@ -451,6 +459,6 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_ws=args.csv, output_folder=args.output,
-         path_row_list=args.pathrows, months=args.months,
+         path_row_list=args.pathrows, years=args.years, months=args.months,
          skip_list_path=args.skiplist, example_flag=args.example,
          overwrite_flag=args.overwrite)

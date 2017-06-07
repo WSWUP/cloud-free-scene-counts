@@ -7,7 +7,8 @@ import sys
 import pandas as pd
 
 
-def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
+def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
+         example_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
     The following filtering will be applied:
@@ -20,6 +21,12 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
         path_row_list (list): list of Landsat path/rows to process
             Example: ['p043r032', 'p043r033']
             Default is []
+        years (str): Comma separated values or ranges of years to download.
+            Example: '1984,2000-2015'
+            Default is '' which will download images for all years
+        months (str): Comma separated values or ranges of months to keep.
+            Example: '1, 2, 3-5'
+            Default is '' which will keep images for all months
         conus_flag (bool): if True, remove all non-CONUS entries
             Remove path < 10, path > 48, row < 25 or row > 43
         example_flag (bool): if True, filter CSV files for example.
@@ -31,7 +38,8 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
     # path_row_list = []
     path_list = []
     row_list = []
-    year_list = []
+    year_list = sorted(list(parse_int_set(years)))
+    month_list = sorted(list(parse_int_set(months)))
 
     if conus_flag:
         path_list = list(range(10, 49))
@@ -65,6 +73,9 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
 
     # Generated fields
     path_row_col = 'PATH_ROW'
+
+    # data_types = ['L1TP']
+    # categories = ['T1', 'RT']
 
     # Only load the following columns from the CSV
     use_cols = [
@@ -104,13 +115,13 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
         # Remove Tier 2 images
-        # input_df = input_df[input_df[data_type_col] = 'L1TP']
+        # input_df = input_df[input_df[data_type_col].upper().isin(data_types)]
 
         # Remove Tier 2 images
-        # input_df = input_df[input_df[category_col] = 'T1']
+        # input_df = input_df[input_df[category_col].upper().isin(categories)]
 
         # Remove Landsat 8 images without thermal
-        # input_df = input_df[input_df[sensor_col] != 'OLI']
+        # input_df = input_df[input_df[sensor_col].upper() != 'OLI']
 
         # Filter by path and row
         if path_list:
@@ -137,6 +148,11 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
         # Filter by year
         if year_list:
             input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
+
+        # Skip early/late months
+        if month_list:
+            logging.debug('  Filtering by month')
+            input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
 
         # Remove nighttime images
         # (this could be a larger value to remove high latitute images)
@@ -214,6 +230,39 @@ def is_valid_folder(parser, arg):
         return arg
 
 
+def parse_int_set(nputstr=""):
+    """Return list of numbers given a string of ranges
+
+    http://thoughtsbyclayg.blogspot.com/2008/10/parsing-list-of-numbers-in-python.html
+    """
+    selection = set()
+    invalid = set()
+    # tokens are comma seperated values
+    tokens = [x.strip() for x in nputstr.split(',')]
+    for i in tokens:
+        try:
+            # typically tokens are plain old integers
+            selection.add(int(i))
+        except:
+            # if not, then it might be a range
+            try:
+                token = [int(k.strip()) for k in i.split('-')]
+                if len(token) > 1:
+                    token.sort()
+                    # we have items seperated by a dash
+                    # try to build a valid range
+                    first = token[0]
+                    last = token[len(token) - 1]
+                    for x in range(first, last + 1):
+                        selection.add(x)
+            except:
+                # not an int and not a range...
+                invalid.add(i)
+    # Report invalid tokens before returning valid selection
+    # print "Invalid set: " + str(invalid)
+    return selection
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
@@ -226,6 +275,14 @@ def arg_parse():
         '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
         help=('Space separated string of Landsat path/rows to keep '
               '(i.e. -pr p043r032 p043r033)'))
+    parser.add_argument(
+        '-y', '--years', default='1984-2017', type=str,
+        help='Comma separated list or range of years to download'
+             '(i.e. "--years 1984,2000-2015")')
+    parser.add_argument(
+        '-m', '--months', default='1-12', type=str,
+        help='Comma separated list or range of months to download'
+             '(i.e. "--months 1,2,3-5")')
     parser.add_argument(
         '--conus', default=False, action='store_true',
         help='Filter CSV files to only CONUS Landsat images', )
@@ -250,4 +307,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
     main(csv_ws=args.csv, path_row_list=args.pathrows,
+         years=args.years, months=args.months,
          conus_flag=args.conus, example_flag=args.example)
