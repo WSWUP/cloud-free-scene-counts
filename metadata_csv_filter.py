@@ -51,13 +51,16 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
     url_col = 'browseURL'
     product_col = 'LANDSAT_PRODUCT_ID'
     date_col = 'acquisitionDate'
-    cloud_cover_col = 'cloudCover'
+    cloud_col = 'CLOUD_COVER_LAND'
     path_col = 'path'
     row_col = 'row'
     data_type_col = 'DATA_TYPE_L1'
-
     sensor_col = 'sensor'
-    cloud_full_col = 'cloudCoverFull'
+    time_col = 'sceneStartTime'
+    elevation_col = 'sunElevation'
+    azimuth_col = 'sunAzimuth'
+    number_col = 'COLLECTION_NUMBER'
+    category_col = 'COLLECTION_CATEGORY'
     # available_col = 'L1_AVAILABLE'
 
     # Generated fields
@@ -65,11 +68,9 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
 
     # Only load the following columns from the CSV
     use_cols = [
-        browse_col, url_col, product_col, date_col, cloud_cover_col,
-        path_col, row_col, data_type_col, sensor_col, cloud_full_col,
-        'sceneStartTime', 'sunElevation', 'sunAzimuth',
-        'COLLECTION_NUMBER', 'COLLECTION_CATEGORY', 'CLOUD_COVER_LAND']
-        # 'UTM_ZONE', 'IMAGE_QUALITY', available_col, 'satelliteNumber']
+        browse_col, url_col, product_col, date_col, cloud_col,
+        path_col, row_col, data_type_col, sensor_col,
+        time_col, elevation_col, azimuth_col, number_col, category_col]
 
     # Setup and validate the path/row lists
     path_row_list, path_list, row_list = check_path_rows(
@@ -102,6 +103,16 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
         input_df = input_df[input_df[row_col] > 9]
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
+        # Remove Tier 2 images
+        # input_df = input_df[input_df[data_type_col] = 'L1TP']
+
+        # Remove Tier 2 images
+        # input_df = input_df[input_df[category_col] = 'T1']
+
+        # Remove Landsat 8 images without thermal
+        # input_df = input_df[input_df[sensor_col] != 'OLI']
+
+        # Filter by path and row
         if path_list:
             logging.debug('  Filtering by path')
             input_df = input_df[input_df[path_col] <= max(path_list)]
@@ -123,10 +134,13 @@ def main(csv_ws, path_row_list=[], conus_flag=False, example_flag=False):
             input_df = input_df[input_df[path_row_col].isin(path_row_list)]
             input_df.drop(path_row_col, axis=1, inplace=True)
 
+        # Filter by year
         if year_list:
             input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
 
-        input_df = input_df[input_df['sunElevation'] > 0]
+        # Remove nighttime images
+        # (this could be a larger value to remove high latitute images)
+        input_df = input_df[input_df[elevation_col] > 0]
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
         # Drop fields
@@ -140,7 +154,7 @@ def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
     """Setup path/row lists
 
     Populate the separate path and row lists from path_row_list
-    Filtering by path and row lists separately seems to be faster than 
+    Filtering by path and row lists separately seems to be faster than
         creating a new path/row field and filtering directly
     """
     path_row_fmt = 'p{:03d}r{:03d}'

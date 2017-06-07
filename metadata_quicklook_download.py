@@ -68,22 +68,24 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
     browse_col = 'browseAvailable'
     url_col = 'browseURL'
     product_col = 'LANDSAT_PRODUCT_ID'
-    # sensor_col = 'sensor'
     date_col = 'acquisitionDate'
-    cloud_cover_col = 'cloudCover'
-    # cloud_full_col = 'cloudCoverFull'
+    cloud_col = 'CLOUD_COVER_LAND'
     path_col = 'path'
     row_col = 'row'
     data_type_col = 'DATA_TYPE_L1'
+    sensor_col = 'sensor'
+    number_col = 'COLLECTION_NUMBER'
+    category_col = 'COLLECTION_CATEGORY'
+    # time_col = 'sceneStartTime'
+    # elevation_col = 'sunElevation'
+    # azimuth_col = 'sunAzimuth'
     # available_col = 'L1_AVAILABLE'
-    # c1_number_col = 'COLLECTION_NUMBER'
-    # c1_category_col = 'COLLECTION_CATEGORY'
-    # cloud_cover_col = 'CLOUD_COVER_LAND'
 
     # Only load the following columns from the CSV
     input_cols = [
-        browse_col, url_col, product_col, date_col, cloud_cover_col,
-        path_col, row_col, data_type_col]
+        browse_col, url_col, product_col, date_col, cloud_col,
+        path_col, row_col, data_type_col, sensor_col,
+        number_col, category_col]
 
     # Generated fields
     path_row_col = 'PATH_ROW'
@@ -224,17 +226,22 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
                 continue
 
             # # Try downloading fully cloudy scenes to cloud folder
-            # if int(row_dict[cloud_cover_col]) >= 9:
+            # if int(row_dict[cloud_cover_col]) >= 90:
             #    image_path = cloud_path[:]
-            #    logging.info('  {} - cloud_cover >= 9, downloading to cloudy'.format(
+            #    logging.info('  {} - cloud_cover >= 90, downloading to cloudy'.format(
             #         product_id))
 
             # Try downloading non-L1T quicklooks to the cloud folder
-            if row_df[data_type_col].upper() not in data_types:
+            # if (row_df[data_type_col].upper() not in data_types or
+            #         row_df[category_col].upper() != 'T1' or
+            #         row_df[cloud_col] >= 90 or
+            #         row_df[sensor_col] != 'OLI'):
+            if (row_df[data_type_col].upper() not in data_types or
+                    row_df[category_col].upper() != 'T1'):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
-                logging.info('  {} - not L1TP, downloading to cloudy'.format(
+                logging.info('  {} - not T1/L1TP, downloading to cloudy'.format(
                     product_id))
 
             # Try downloading scenes in skip list to cloudy folder
