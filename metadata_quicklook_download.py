@@ -203,7 +203,7 @@ def main(csv_ws, output_folder, path_row_list=[], months='',
             image_folder = os.path.join(
                 output_folder, row_df[path_row_col], str(image_dt.year))
             image_name = '{0}_{1}.jpg'.format(
-                image_dt.strftime('%Y_%j'), product_id[:4])
+                image_dt.strftime('%Y%m%d_%j'), product_id[:4].upper())
             image_path = os.path.join(image_folder, image_name)
 
             # "Cloudy" quicklooks are moved to a separate folder

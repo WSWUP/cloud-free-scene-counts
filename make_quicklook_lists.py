@@ -42,7 +42,8 @@ def main(quicklook_folder, output_folder, path_row_list=[],
     row_list = []
 
     quicklook_re = re.compile(
-        '(?P<year>\d{4})_(?P<doy>\d{3})_(?P<landsat>\w{4}).jpg')
+        '(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})_'
+        '(?P<doy>\d{3})_(?P<landsat>\w{4}).jpg')
     path_row_fmt = 'p{:03d}r{:03d}'
     # path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
@@ -104,10 +105,10 @@ def main(quicklook_folder, output_folder, path_row_list=[],
 
         for name in files:
             try:
-                year, doy, landsat = quicklook_re.match(name).groups()
-            except:
+                y, m, d, doy, landsat = quicklook_re.match(name).groups()
+            except Exception as e:
                 continue
-            image_dt = dt.datetime.strptime('{}_{}'.format(year, doy), '%Y_%j')
+            image_dt = dt.datetime(int(y), int(m), int(d))
             product_id = '{}_{:03d}{:03d}_{}'.format(
                 landsat, path, row, image_dt.strftime('%Y%m%d'))
             # scene_id = '{}{:03d}{:03d}{:04d}{:03d}'.format(
