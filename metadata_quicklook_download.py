@@ -14,7 +14,7 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, path_row_list=[], years='', months='',
+def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
          skip_list_path=None, example_flag=False, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
@@ -23,7 +23,7 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
     Args:
         csv_ws (str): workspace of the Landsat bulk metadata CSV files
         output_folder (str): folder path
-        path_row_list (list): Download images for specified Landsat path/rows.
+        wrs2_tile_list (list): Download images for specified Landsat path/rows.
             Example: ['p043r032', 'p043r033']
             Default is [] which will download all images in metadata CSV
         years (str): Comma separated values or ranges of years to download.
@@ -51,13 +51,13 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
     month_list = sorted(list(parse_int_set(months)))
 
     # Additional/custom path/row filtering can be hardcoded
-    # path_row_list = []
+    # wrs2_tile_list = []
     path_list = []
     row_list = []
 
     # Filter CSVs for example
     if example_flag:
-        path_row_list = ['p043r030']
+        wrs2_tile_list = ['p043r030']
         year_list = [2000, 2015]
 
     csv_file_list = [
@@ -66,7 +66,7 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
         'LANDSAT_TM_C1.csv'
     ]
 
-    path_row_fmt = 'p{:03d}r{:03d}'
+    wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
     # Input fields
     browse_col = 'browseAvailable'
@@ -92,15 +92,15 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
         number_col, category_col]
 
     # Generated fields
-    path_row_col = 'PATH_ROW'
+    wrs2_tile_col = 'PATH_ROW'
 
     # All other data types and categories will be written to cloudy folder
     data_types = ['L1TP']
     categories = ['T1', 'RT']
 
     # Setup and validate the path/row lists
-    path_row_list, path_list, row_list = check_path_rows(
-        path_row_list, path_list, row_list)
+    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
+        wrs2_tile_list, path_list, row_list)
 
     # Error checking
     if not os.path.isdir(csv_ws):
@@ -155,14 +155,14 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
 
         # Then filter by path/row combined
         try:
-            input_df[path_row_col] = input_df[[path_col, row_col]].apply(
-                lambda x: path_row_fmt.format(x[0], x[1]), axis=1)
+            input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
+                lambda x: wrs2_tile_fmt.format(x[0], x[1]), axis=1)
         except ValueError:
             logging.info('  Possible empty DataFrame, skipping file')
             continue
-        if path_row_list:
+        if wrs2_tile_list:
             logging.debug('  Filtering by path/row')
-            input_df = input_df[input_df[path_row_col].isin(path_row_list)]
+            input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
 
         # Filter by year
         if year_list:
@@ -201,11 +201,11 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
             # sensor = row_dict[sensor_col].upper()
             # path = int(row_df[path_col])
             # row = int(row_df[row_col])
-            # path_row = row_df[path_row_col]
+            # wrs2_tile = row_df[wrs2_tile_col]
 
             # Quicklook image path
             image_folder = os.path.join(
-                output_folder, row_df[path_row_col], str(image_dt.year))
+                output_folder, row_df[wrs2_tile_col], str(image_dt.year))
             image_name = '{0}_{1}.jpg'.format(
                 image_dt.strftime('%Y%m%d_%j'), product_id[:4].upper())
             image_path = os.path.join(image_folder, image_name)
@@ -284,17 +284,17 @@ def main(csv_ws, output_folder, path_row_list=[], years='', months='',
         download_file(image_url, image_path)
 
 
-def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
+def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
     """Setup path/row lists"""
-    path_row_fmt = 'p{:03d}r{:03d}'
-    path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+    wrs2_tile_fmt = 'p{:03d}r{:03d}'
+    wrs2_tile_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
     # Force path/row list to zero padded three digit numbers
-    if path_row_list:
-        path_row_list = sorted([
-            path_row_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
-            for pr in path_row_list
-            for m in [path_row_re.match(pr)] if m])
+    if wrs2_tile_list:
+        wrs2_tile_list = sorted([
+            wrs2_tile_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
+            for wrs2_tile in wrs2_tile_list
+            for m in [wrs2_tile_re.match(wrs2_tile)] if m])
 
     # If path_list and row_list were specified, force to integer type
     # Declare variable as an empty list if it does not exist
@@ -313,27 +313,29 @@ def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
             'exiting\n  {}'.format(row_list))
         sys.exit()
 
-    # Convert path_row_list to path_list and row_list if not set
-    # Pre-filtering on path and row separately is faster than building path_row
+    # Convert wrs2_tile_list to path_list and row_list if not set
+    # Pre-filtering on path and row separately is faster than building wrs2_tile
     # This is a pretty messy way of doing this...
-    if path_row_list and not path_list:
+    if wrs2_tile_list and not path_list:
         path_list = sorted(list(set([
-            int(path_row_re.match(pr).group('PATH'))
-            for pr in path_row_list if path_row_re.match(pr)])))
-    if path_row_list and not row_list:
+            int(wrs2_tile_re.match(wrs2_tile).group('PATH'))
+            for wrs2_tile in wrs2_tile_list
+            if wrs2_tile_re.match(wrs2_tile)])))
+    if wrs2_tile_list and not row_list:
         row_list = sorted(list(set([
-            int(path_row_re.match(pr).group('ROW'))
-            for pr in path_row_list if path_row_re.match(pr)])))
+            int(wrs2_tile_re.match(wrs2_tile).group('ROW'))
+            for wrs2_tile in wrs2_tile_list
+            if wrs2_tile_re.match(wrs2_tile)])))
     if path_list:
         logging.debug('  Paths: {}'.format(
             ' '.join(list(map(str, path_list)))))
     if row_list:
         logging.debug('  Rows: {}'.format(' '.join(list(map(str, row_list)))))
-    if path_row_list:
-        logging.debug('  Path/Rows: {}'.format(
-            ' '.join(list(map(str, path_row_list)))))
+    if wrs2_tile_list:
+        logging.debug('  WRS2 Tiles: {}'.format(
+            ' '.join(list(map(str, wrs2_tile_list)))))
 
-    return path_row_list, path_list, row_list
+    return wrs2_tile_list, path_list, row_list
 
 
 def download_file(file_url, file_path):
@@ -459,6 +461,6 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_ws=args.csv, output_folder=args.output,
-         path_row_list=args.pathrows, years=args.years, months=args.months,
+         wrs2_tile_list=args.pathrows, years=args.years, months=args.months,
          skip_list_path=args.skiplist, example_flag=args.example,
          overwrite_flag=args.overwrite)
