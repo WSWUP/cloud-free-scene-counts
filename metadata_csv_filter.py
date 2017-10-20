@@ -7,7 +7,7 @@ import sys
 import pandas as pd
 
 
-def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
+def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
          example_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
@@ -18,7 +18,7 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
 
     Args:
         csv_ws (): workspace of the Landsat bulk metadata CSV files
-        path_row_list (list): list of Landsat path/rows to process
+        wrs2_tile_list (list): list of Landsat path/rows to process
             Example: ['p043r032', 'p043r033']
             Default is []
         years (str): Comma separated values or ranges of years to download.
@@ -35,7 +35,7 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
     logging.info('\nFilter/reducing Landsat Metdata CSV files')
 
     # Additional/custom path/row filtering can be hardcoded
-    # path_row_list = []
+    # wrs2_tile_list = []
     path_list = []
     row_list = []
     year_list = sorted(list(parse_int_set(years)))
@@ -45,7 +45,7 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
         path_list = list(range(10, 49))
         row_list = list(range(25, 44))
     if example_flag:
-        path_row_list = ['p043r030']
+        wrs2_tile_list = ['p043r030']
         year_list = [2000, 2015]
 
     csv_file_list = [
@@ -70,9 +70,10 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
     number_col = 'COLLECTION_NUMBER'
     category_col = 'COLLECTION_CATEGORY'
     # available_col = 'L1_AVAILABLE'
+    # utm_zone = 'UTM_ZONE'  # Not in L8 file
 
     # Generated fields
-    path_row_col = 'PATH_ROW'
+    wrs2_tile_col = 'PATH_ROW'
 
     # data_types = ['L1TP']
     # categories = ['T1', 'RT']
@@ -84,8 +85,8 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
         time_col, elevation_col, azimuth_col, number_col, category_col]
 
     # Setup and validate the path/row lists
-    path_row_list, path_list, row_list = check_path_rows(
-        path_row_list, path_list, row_list)
+    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
+        wrs2_tile_list, path_list, row_list)
 
     # Process each CSV
     for csv_name in csv_file_list:
@@ -110,78 +111,84 @@ def main(csv_ws, path_row_list=[], years='', months='', conus_flag=False,
         input_df = input_df[use_cols]
 
         # Remove high latitute rows
-        input_df = input_df[input_df[row_col] < 100]
-        input_df = input_df[input_df[row_col] > 9]
-        logging.debug('  Scene count: {}'.format(len(input_df)))
+        if row_col in use_cols:
+            input_df = input_df[input_df[row_col] < 100]
+            input_df = input_df[input_df[row_col] > 9]
+            logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # Remove Tier 2 images
-        # input_df = input_df[input_df[data_type_col].upper().isin(data_types)]
+        # # Remove Tier 2 images
+        # if data_type_col in use_cols:
+        #     input_df = input_df[input_df[data_type_col].isin(data_types)]
 
-        # Remove Tier 2 images
-        # input_df = input_df[input_df[category_col].upper().isin(categories)]
+        # # Remove Tier 2 images
+        # if category_col in use_cols:
+        #     input_df = input_df[input_df[category_col].isin(categories)]
 
-        # Remove Landsat 8 images without thermal
-        # input_df = input_df[input_df[sensor_col].upper() != 'OLI']
+        # # Remove Landsat 8 images without thermal
+        # if sensor_col in use_cols:
+        #     input_df = input_df[input_df[sensor_col].upper() != 'OLI']
 
         # Filter by path and row
-        if path_list:
+        if path_list and path_col in use_cols:
             logging.debug('  Filtering by path')
             input_df = input_df[input_df[path_col] <= max(path_list)]
             input_df = input_df[input_df[path_col] >= min(path_list)]
             input_df = input_df[input_df[path_col].isin(path_list)]
-        if row_list:
+        if row_list and row_col in use_cols:
             logging.debug('  Filtering by row')
             input_df = input_df[input_df[row_col] <= max(row_list)]
             input_df = input_df[input_df[row_col] >= min(row_list)]
             input_df = input_df[input_df[row_col].isin(row_list)]
-        if path_row_list:
+        if wrs2_tile_list and path_col in use_cols and row_col in use_cols:
             logging.debug('  Filtering by path/row')
             try:
-                input_df[path_row_col] = input_df[[path_col, row_col]].apply(
+                input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
                     lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
             except ValueError:
                 logging.info('  Possible empty DataFrame, skipping file')
                 continue
-            input_df = input_df[input_df[path_row_col].isin(path_row_list)]
-            input_df.drop(path_row_col, axis=1, inplace=True)
+            input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
+            input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
         # Filter by year
-        if year_list:
+        if year_list and date_col in use_cols:
             input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
 
         # Skip early/late months
-        if month_list:
+        if month_list and date_col in use_cols:
             logging.debug('  Filtering by month')
             input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
 
         # Remove nighttime images
         # (this could be a larger value to remove high latitute images)
-        input_df = input_df[input_df[elevation_col] > 0]
+        if elevation_col in use_cols:
+            input_df = input_df[input_df[elevation_col] > 0]
         logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # Drop fields
-        # input_df.drop(browse_col, axis=1, inplace=True)
+        # # Drop fields
+        # if browse_col:
+        #     input_df.drop(browse_col, axis=1, inplace=True)
 
         # Save to CSV
         input_df.to_csv(csv_path, index=None)
 
 
-def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
+def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
     """Setup path/row lists
 
-    Populate the separate path and row lists from path_row_list
+    Populate the separate path and row lists from wrs2_tile_list
     Filtering by path and row lists separately seems to be faster than
         creating a new path/row field and filtering directly
     """
-    path_row_fmt = 'p{:03d}r{:03d}'
-    path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+    wrs2_tile_fmt = 'p{:03d}r{:03d}'
+    wrs2_tile_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
     # Force path/row list to zero padded three digit numbers
-    if path_row_list:
-        path_row_list = sorted([
-            path_row_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
-            for pr in path_row_list
-            for m in [path_row_re.match(pr)] if m])
+    if wrs2_tile_list:
+        wrs2_tile_list = sorted([
+            wrs2_tile_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
+            for pr in wrs2_tile_list
+            for m in [wrs2_tile_re.match(pr)] if m])
 
     # If path_list and row_list were specified, force to integer type
     # Declare variable as an empty list if it does not exist
@@ -200,27 +207,27 @@ def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
             'exiting\n  {}'.format(row_list))
         sys.exit()
 
-    # Convert path_row_list to path_list and row_list if not set
-    # Pre-filtering on path and row separately is faster than building path_row
+    # Convert wrs2_tile_list to path_list and row_list if not set
+    # Pre-filtering on path and row separately is faster than building wrs2_tile
     # This is a pretty messy way of doing this...
-    if path_row_list and not path_list:
+    if wrs2_tile_list and not path_list:
         path_list = sorted(list(set([
-            int(path_row_re.match(pr).group('PATH'))
-            for pr in path_row_list if path_row_re.match(pr)])))
-    if path_row_list and not row_list:
+            int(wrs2_tile_re.match(pr).group('PATH'))
+            for pr in wrs2_tile_list if wrs2_tile_re.match(pr)])))
+    if wrs2_tile_list and not row_list:
         row_list = sorted(list(set([
-            int(path_row_re.match(pr).group('ROW'))
-            for pr in path_row_list if path_row_re.match(pr)])))
+            int(wrs2_tile_re.match(pr).group('ROW'))
+            for pr in wrs2_tile_list if wrs2_tile_re.match(pr)])))
     if path_list:
         logging.debug('  Paths: {}'.format(
             ' '.join(list(map(str, path_list)))))
     if row_list:
         logging.debug('  Rows: {}'.format(' '.join(list(map(str, row_list)))))
-    if path_row_list:
-        logging.debug('  Path/Rows: {}'.format(
-            ' '.join(list(map(str, path_row_list)))))
+    if wrs2_tile_list:
+        logging.debug('  WRS2 Tiles: {}'.format(
+            ' '.join(list(map(str, wrs2_tile_list)))))
 
-    return path_row_list, path_list, row_list
+    return wrs2_tile_list, path_list, row_list
 
 
 def is_valid_folder(parser, arg):
@@ -306,6 +313,6 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_ws=args.csv, path_row_list=args.pathrows,
+    main(csv_ws=args.csv, wrs2_tile_list=args.pathrows,
          years=args.years, months=args.months,
          conus_flag=args.conus, example_flag=args.example)

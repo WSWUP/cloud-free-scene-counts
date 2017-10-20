@@ -8,14 +8,14 @@ import re
 import sys
 
 
-def main(quicklook_folder, output_folder, path_row_list=[],
+def main(quicklook_folder, output_folder, wrs2_tile_list=[],
          skip_list_path=None):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Args:
         quicklook_folder (str): folder path
         output_folder (str): folder path to save skip list
-        path_row_list (list): list of Landsat path/rows to process
+        wrs2_tile_list (list): list of Landsat path/rows to process
             Example: ['p043r032', 'p043r033']
             Default is []
         skip_list_path (str): file path of Landsat skip list
@@ -37,19 +37,19 @@ def main(quicklook_folder, output_folder, path_row_list=[],
     # year_list = [2015]
 
     # Additional/custom path/row filtering can be hardcoded
-    # path_row_list = []
+    # wrs2_tile_list = []
     path_list = []
     row_list = []
 
     quicklook_re = re.compile(
         '(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})_'
         '(?P<doy>\d{3})_(?P<landsat>\w{4}).jpg')
-    path_row_fmt = 'p{:03d}r{:03d}'
-    # path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+    wrs2_tile_fmt = 'p{:03d}r{:03d}'
+    # wrs2_tile_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
     # Setup and validate the path/row lists
-    path_row_list, path_list, row_list = check_path_rows(
-        path_row_list, path_list, row_list)
+    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
+        wrs2_tile_list, path_list, row_list)
 
     # Error checking
     if not os.path.isdir(output_folder):
@@ -85,10 +85,10 @@ def main(quicklook_folder, output_folder, path_row_list=[],
             continue
 
         path, row, year = list(map(int, pr_match.groups()[:3]))
-        path_row = path_row_fmt.format(path, row)
+        wrs2_tile = wrs2_tile_fmt.format(path, row)
 
         # Skip scenes first by path/row
-        if path_row_list and path_row not in path_row_list:
+        if wrs2_tile_list and wrs2_tile not in wrs2_tile_list:
             logging.info('{} - path/row, skipping'.format(root))
             continue
         elif path_list and path not in path_list:
@@ -142,36 +142,36 @@ def main(quicklook_folder, output_folder, path_row_list=[],
         counts = defaultdict(dict)
 
         for year, doy, product_id in sorted(output_keep_list):
-            path_row = 'p{}r{}'.format(product_id[5:8], product_id[8:11])
+            wrs2_tile = 'p{}r{}'.format(product_id[5:8], product_id[8:11])
             output_dt = dt.datetime.strptime(
                 '{}_{:03d}'.format(year, int(doy)), '%Y_%j')
             try:
-                counts[path_row][year][output_dt.month] += 1
+                counts[wrs2_tile][year][output_dt.month] += 1
             except Exception as e:
-                counts[path_row][year] = {m: 0 for m in range(1, 13)}
+                counts[wrs2_tile][year] = {m: 0 for m in range(1, 13)}
 
         with open(summary_path, 'w') as output_f:
             output_f.write('{},{},{}\n'.format(
                 'PATH_ROW', 'YEAR', ','.join([
                     calendar.month_abbr[m].upper() for m in range(1, 13)])))
-            for path_row, year_counts in sorted(counts.items()):
+            for wrs2_tile, year_counts in sorted(counts.items()):
                 for year, month_counts in sorted(year_counts.items()):
                     output_f.write('{},{},{}\n'.format(
-                        path_row, year, ','.join([
+                        wrs2_tile, year, ','.join([
                             str(c) for m, c in sorted(month_counts.items())])))
 
 
-def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
+def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
     """Setup path/row lists"""
-    path_row_fmt = 'p{:03d}r{:03d}'
-    path_row_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+    wrs2_tile_fmt = 'p{:03d}r{:03d}'
+    wrs2_tile_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
 
     # Force path/row list to zero padded three digit numbers
-    if path_row_list:
-        path_row_list = sorted([
-            path_row_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
-            for pr in path_row_list
-            for m in [path_row_re.match(pr)] if m])
+    if wrs2_tile_list:
+        wrs2_tile_list = sorted([
+            wrs2_tile_fmt.format(int(m.group('PATH')), int(m.group('ROW')))
+            for wrs2_tile in wrs2_tile_list
+            for m in [wrs2_tile_re.match(wrs2_tile)] if m])
 
     # If path_list and row_list were specified, force to integer type
     # Declare variable as an empty list if it does not exist
@@ -190,27 +190,29 @@ def check_path_rows(path_row_list=[], path_list=[], row_list=[]):
             'exiting\n  {}'.format(row_list))
         sys.exit()
 
-    # Convert path_row_list to path_list and row_list if not set
-    # Pre-filtering on path and row separately is faster than building path_row
+    # Convert wrs2_tile_list to path_list and row_list if not set
+    # Pre-filtering on path and row separately is faster than building wrs2_tile
     # This is a pretty messy way of doing this...
-    if path_row_list and not path_list:
+    if wrs2_tile_list and not path_list:
         path_list = sorted(list(set([
-            int(path_row_re.match(pr).group('PATH'))
-            for pr in path_row_list if path_row_re.match(pr)])))
-    if path_row_list and not row_list:
+            int(wrs2_tile_re.match(wrs2_tile).group('PATH'))
+            for wrs2_tile in wrs2_tile_list
+            if wrs2_tile_re.match(wrs2_tile)])))
+    if wrs2_tile_list and not row_list:
         row_list = sorted(list(set([
-            int(path_row_re.match(pr).group('ROW'))
-            for pr in path_row_list if path_row_re.match(pr)])))
+            int(wrs2_tile_re.match(wrs2_tile).group('ROW'))
+            for wrs2_tile in wrs2_tile_list
+            if wrs2_tile_re.match(wrs2_tile)])))
     if path_list:
         logging.debug('  Paths: {}'.format(
             ' '.join(list(map(str, path_list)))))
     if row_list:
         logging.debug('  Rows: {}'.format(' '.join(list(map(str, row_list)))))
-    if path_row_list:
-        logging.debug('  Path/Rows: {}'.format(
-            ' '.join(list(map(str, path_row_list)))))
+    if wrs2_tile_list:
+        logging.debug('  WRS2 Tiles: {}'.format(
+            ' '.join(list(map(str, wrs2_tile_list)))))
 
-    return path_row_list, path_list, row_list
+    return wrs2_tile_list, path_list, row_list
 
 
 def arg_parse():
@@ -255,4 +257,4 @@ if __name__ == '__main__':
         'Script:', os.path.basename(sys.argv[0])))
 
     main(quicklook_folder=args.quicklook, output_folder=args.output,
-         path_row_list=args.pathrows, skip_list_path=args.skiplist)
+         wrs2_tile_list=args.pathrows, skip_list_path=args.skiplist)
