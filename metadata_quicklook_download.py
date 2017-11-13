@@ -1,4 +1,5 @@
 import argparse
+from builtins import input
 import datetime as dt
 import logging
 import os
@@ -95,8 +96,9 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
     wrs2_tile_col = 'PATH_ROW'
 
     # All other data types and categories will be written to cloudy folder
+    # "A1" isn't documented but appear to be good Landsat 7 L1TP images
     data_types = ['L1TP']
-    categories = ['T1', 'RT']
+    categories = ['T1', 'RT', 'A1']
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -213,6 +215,20 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
             # "Cloudy" quicklooks are moved to a separate folder
             cloud_path = os.path.join(
                 image_folder, cloud_folder_name, image_name)
+
+            # # DEADBEEF - Rename/move quicklooks with old naming style
+            # old_image_name = '{0}_{1}.jpg'.format(
+            #     image_dt.strftime('%Y_%j'),
+            #     product_id[:4].upper().replace('0', ''))
+            # old_image_path = os.path.join(image_folder, old_image_name)
+            # old_cloud_path = os.path.join(
+            #     image_folder, cloud_folder_name, old_image_name)
+            # if os.path.isfile(old_image_path) and not os.path.isfile(image_path):
+            #     logging.info('{} -> {}'.format(old_image_path, image_path))
+            #     shutil.move(old_image_path, image_path)
+            # if os.path.isfile(old_cloud_path) and not os.path.isfile(cloud_path):
+            #     logging.info('{} -> {}'.format(old_image_path, image_path))
+            #     shutil.move(old_cloud_path, cloud_path)
 
             # Remove exist
             if overwrite_flag:
