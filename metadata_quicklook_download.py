@@ -1,5 +1,4 @@
 import argparse
-from builtins import input
 import datetime as dt
 import logging
 import os
