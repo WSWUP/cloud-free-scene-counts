@@ -149,6 +149,7 @@ def main(quicklook_folder, output_folder, wrs2_tile_list=[],
                 counts[wrs2_tile][year][output_dt.month] += 1
             except Exception as e:
                 counts[wrs2_tile][year] = {m: 0 for m in range(1, 13)}
+                counts[wrs2_tile][year][output_dt.month] = 1
 
         with open(summary_path, 'w') as output_f:
             output_f.write('{},{},{}\n'.format(
