@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import re
+import shutil
 import sys
 
 import pandas as pd
@@ -93,86 +94,148 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_ws, csv_name)
 
-        # Read in the CSV
-        try:
-            input_df = pd.read_csv(csv_path, parse_dates=[date_col])
-        except Exception as e:
-            logging.warning(
-                '  CSV file could not be read or does not exist, skipping')
-            logging.debug('  Exception: {}'.format(e))
-            continue
+        # Process the CSVs in chunks to limit the memory usage
+        temp_path = csv_path.replace('.csv', '_filter.csv')
+        for i, input_df in enumerate(pd.read_csv(
+                csv_path, parse_dates=[date_col], chunksize=1 << 16,
+                usecols=use_cols)):
+            logging.debug('\n  Scene count: {}'.format(len(input_df)))
 
-        # parse_dates=[date_col]
-        # logging.debug('  {}'.format(', '.join(input_df.columns.values)))
-        # logging.debug(input_df.head())
-        logging.debug('  Scene count: {}'.format(len(input_df)))
+            # Remove high latitute rows
+            if row_col in use_cols:
+                input_df = input_df[input_df[row_col] < 100]
+                input_df = input_df[input_df[row_col] > 9]
+                logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # Keep target columns
-        input_df = input_df[use_cols]
+            # Filter by path and row
+            if path_list and path_col in use_cols:
+                logging.debug('  Filtering by path')
+                input_df = input_df[input_df[path_col] <= max(path_list)]
+                input_df = input_df[input_df[path_col] >= min(path_list)]
+                input_df = input_df[input_df[path_col].isin(path_list)]
+            if row_list and row_col in use_cols:
+                logging.debug('  Filtering by row')
+                input_df = input_df[input_df[row_col] <= max(row_list)]
+                input_df = input_df[input_df[row_col] >= min(row_list)]
+                input_df = input_df[input_df[row_col].isin(row_list)]
+            if wrs2_tile_list and path_col in use_cols and row_col in use_cols:
+                logging.debug('  Filtering by path/row')
+                try:
+                    input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
+                        lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+                except ValueError:
+                    logging.info('  Possible empty DataFrame, skipping file')
+                    continue
+                input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
+                input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
-        # Remove high latitute rows
-        if row_col in use_cols:
-            input_df = input_df[input_df[row_col] < 100]
-            input_df = input_df[input_df[row_col] > 9]
+            # Filter by year
+            if year_list and date_col in use_cols:
+                input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
+
+            # Skip early/late months
+            if month_list and date_col in use_cols:
+                logging.debug('  Filtering by month')
+                input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
+
+            # Remove nighttime images
+            # (this could be a larger value to remove high latitute images)
+            if elevation_col in use_cols:
+                input_df = input_df[input_df[elevation_col] > 0]
             logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # # Remove Tier 2 images
-        # if data_type_col in use_cols:
-        #     input_df = input_df[input_df[data_type_col].isin(data_types)]
+            if i == 0:
+                input_df.to_csv(temp_path, mode='a', index=False, header=True)
+            else:
+                input_df.to_csv(temp_path, mode='a', index=False, header=False)
+        shutil.move(temp_path, csv_path)
 
-        # # Remove Tier 2 images
-        # if category_col in use_cols:
-        #     input_df = input_df[input_df[category_col].isin(categories)]
 
-        # # Remove Landsat 8 images without thermal
-        # if sensor_col in use_cols:
-        #     input_df = input_df[input_df[sensor_col].upper() != 'OLI']
+        # # Read in the CSV
+        # try:
+        #     input_df = pd.read_csv(temp_path, parse_dates=[date_col])
+        # except Exception as e:
+        #     logging.warning(
+        #         '  CSV file could not be read or does not exist, skipping')
+        #     logging.debug('  Exception: {}'.format(e))
+        #     continue
 
-        # Filter by path and row
-        if path_list and path_col in use_cols:
-            logging.debug('  Filtering by path')
-            input_df = input_df[input_df[path_col] <= max(path_list)]
-            input_df = input_df[input_df[path_col] >= min(path_list)]
-            input_df = input_df[input_df[path_col].isin(path_list)]
-        if row_list and row_col in use_cols:
-            logging.debug('  Filtering by row')
-            input_df = input_df[input_df[row_col] <= max(row_list)]
-            input_df = input_df[input_df[row_col] >= min(row_list)]
-            input_df = input_df[input_df[row_col].isin(row_list)]
-        if wrs2_tile_list and path_col in use_cols and row_col in use_cols:
-            logging.debug('  Filtering by path/row')
-            try:
-                input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
-                    lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
-            except ValueError:
-                logging.info('  Possible empty DataFrame, skipping file')
-                continue
-            input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
-            input_df.drop(wrs2_tile_col, axis=1, inplace=True)
+        # # parse_dates=[date_col]
+        # # logging.debug('  {}'.format(', '.join(input_df.columns.values)))
+        # # logging.debug(input_df.head())
+        # logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # Filter by year
-        if year_list and date_col in use_cols:
-            input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
+        # # # Remove non-target columns
+        # # for col in list(input_df.columns.values):
+        # #     if col not in use_cols:
+        # #         input_df.drop(col, axis=1, inplace=True)
 
-        # Skip early/late months
-        if month_list and date_col in use_cols:
-            logging.debug('  Filtering by month')
-            input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
+        # # Keep target columns
+        # input_df = input_df[use_cols]
 
-        # Remove nighttime images
-        # (this could be a larger value to remove high latitute images)
-        if elevation_col in use_cols:
-            input_df = input_df[input_df[elevation_col] > 0]
-        logging.debug('  Scene count: {}'.format(len(input_df)))
+        # # Remove high latitute rows
+        # if row_col in use_cols:
+        #     input_df = input_df[input_df[row_col] < 100]
+        #     input_df = input_df[input_df[row_col] > 9]
+        #     logging.debug('  Scene count: {}'.format(len(input_df)))
 
-        # # Drop fields
-        # if browse_col:
-        #     input_df.drop(browse_col, axis=1, inplace=True)
+        # # # Remove Tier 2 images
+        # # if data_type_col in use_cols:
+        # #     input_df = input_df[input_df[data_type_col].isin(data_types)]
 
-        # Save to CSV
-        input_df.to_csv(csv_path, index=None)
+        # # # Remove Tier 2 images
+        # # if category_col in use_cols:
+        # #     input_df = input_df[input_df[category_col].isin(categories)]
 
-        del input_df
+        # # # Remove Landsat 8 images without thermal
+        # # if sensor_col in use_cols:
+        # #     input_df = input_df[input_df[sensor_col].upper() != 'OLI']
+
+        # # Filter by path and row
+        # if path_list and path_col in use_cols:
+        #     logging.debug('  Filtering by path')
+        #     input_df = input_df[input_df[path_col] <= max(path_list)]
+        #     input_df = input_df[input_df[path_col] >= min(path_list)]
+        #     input_df = input_df[input_df[path_col].isin(path_list)]
+        # if row_list and row_col in use_cols:
+        #     logging.debug('  Filtering by row')
+        #     input_df = input_df[input_df[row_col] <= max(row_list)]
+        #     input_df = input_df[input_df[row_col] >= min(row_list)]
+        #     input_df = input_df[input_df[row_col].isin(row_list)]
+        # if wrs2_tile_list and path_col in use_cols and row_col in use_cols:
+        #     logging.debug('  Filtering by path/row')
+        #     try:
+        #         input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
+        #             lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+        #     except ValueError:
+        #         logging.info('  Possible empty DataFrame, skipping file')
+        #         continue
+        #     input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
+        #     input_df.drop(wrs2_tile_col, axis=1, inplace=True)
+
+        # # Filter by year
+        # if year_list and date_col in use_cols:
+        #     input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
+
+        # # Skip early/late months
+        # if month_list and date_col in use_cols:
+        #     logging.debug('  Filtering by month')
+        #     input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
+
+        # # Remove nighttime images
+        # # (this could be a larger value to remove high latitute images)
+        # if elevation_col in use_cols:
+        #     input_df = input_df[input_df[elevation_col] > 0]
+        # logging.debug('  Scene count: {}'.format(len(input_df)))
+
+        # # # Drop fields
+        # # if browse_col:
+        # #     input_df.drop(browse_col, axis=1, inplace=True)
+
+        # # Save to CSV
+        # input_df.to_csv(csv_path, index=None)
+
+        # del input_df
 
 
 def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):

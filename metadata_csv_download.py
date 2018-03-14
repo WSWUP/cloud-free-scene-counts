@@ -82,13 +82,19 @@ def download_file(file_url, file_path):
     # urlrequest.urlretrieve(file_url, file_path)
 
 
-def decompress_gz(input_path, output_path):
+def decompress_gz(input_path, output_path, blocksize=1 << 14):
     """"""
     logging.debug('  Extracting CSV file')
     try:
         with gzip.open(input_path, 'rb') as input_f:
             with open(output_path, 'wb') as output_f:
-                output_f.write(input_f.read())
+                while True:
+                    block = input_f.read(blocksize)
+                    if block == '' or block == b'':
+                        break
+                    output_f.write(block)
+            # with open(output_path, 'wb') as output_f:
+            #     output_f.write(input_f.read())
     except Exception as e:
         logging.error('  Unhandled Exception: {}'.format(e))
         try:
