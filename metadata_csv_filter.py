@@ -172,6 +172,8 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
         # Save to CSV
         input_df.to_csv(csv_path, index=None)
 
+        del input_df
+
 
 def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
     """Setup path/row lists
