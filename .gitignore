@@ -1,6 +1,9 @@
 # Python specific
 *.pyc
 
+# Jupyter
+.ipynb_checkpoints
+
 # PyCharm
 .idea
 
