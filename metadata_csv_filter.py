@@ -66,8 +66,8 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
     data_type_col = 'DATA_TYPE_L1'
     sensor_col = 'sensor'
     time_col = 'sceneStartTime'
-    elevation_col = 'sunElevation'
-    azimuth_col = 'sunAzimuth'
+    # elevation_col = 'sunElevation'
+    # azimuth_col = 'sunAzimuth'
     number_col = 'COLLECTION_NUMBER'
     category_col = 'COLLECTION_CATEGORY'
     # available_col = 'L1_AVAILABLE'
@@ -82,8 +82,10 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
     # Only load the following columns from the CSV
     use_cols = [
         browse_col, url_col, product_col, date_col, cloud_col,
-        path_col, row_col, data_type_col, sensor_col,
-        time_col, elevation_col, azimuth_col, number_col, category_col]
+        path_col, row_col, data_type_col, sensor_col, time_col,
+        # elevation_col, azimuth_col,
+        number_col, category_col,
+    ]
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -138,11 +140,11 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
                 logging.debug('  Filtering by month')
                 input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
 
-            # Remove nighttime images
-            # (this could be a larger value to remove high latitute images)
-            if elevation_col in use_cols:
-                input_df = input_df[input_df[elevation_col] > 0]
-            logging.debug('  Scene count: {}'.format(len(input_df)))
+            # # Remove nighttime images
+            # # (this could be a larger value to remove high latitute images)
+            # if elevation_col in use_cols:
+            #     input_df = input_df[input_df[elevation_col] > 0]
+            # logging.debug('  Scene count: {}'.format(len(input_df)))
 
             if i == 0:
                 input_df.to_csv(temp_path, mode='a', index=False, header=True)
