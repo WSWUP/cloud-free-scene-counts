@@ -12,13 +12,18 @@ def main(quicklook_folder, output_folder, wrs2_tile_list=[],
          skip_list_path=None):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
-    Args:
-        quicklook_folder (str): folder path
-        output_folder (str): folder path to save skip list
-        wrs2_tile_list (list): list of Landsat path/rows to process
-            Example: ['p043r032', 'p043r033']
-            Default is []
-        skip_list_path (str): file path of Landsat skip list
+    Parameters
+    ----------
+    quicklook_folder (str): 
+        Folder path.
+    output_folder (str): 
+        Folder path to save skip list.
+    wrs2_tile_list : list, optional
+        Landsat path/rows to process (the default is []).
+        Example: ['p043r032', 'p043r033']
+    skip_list_path : str, optional
+        File path of Landsat skip list (the default is None).
+
     """
     logging.info('\nMake skip & keep lists from quicklook images')
 

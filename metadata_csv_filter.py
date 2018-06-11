@@ -12,26 +12,36 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
          example_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
+    Parameters
+    ----------
+    csv_ws : str
+        workspace of the Landsat bulk metadata CSV files
+    wrs2_tile_list : list, optional
+        Landsat path/rows to process
+        Example: ['p043r032', 'p043r033']
+        Default is []
+    years : str, optional
+        Comma separated values or ranges of years to download.
+        Example: '1984,2000-2015'
+        Default is '' which will download images for all years
+    months : str, optional
+        Comma separated values or ranges of months to keep.
+        Example: '1, 2, 3-5'
+        Default is '' which will keep images for all months
+    conus_flag : bool, optional
+        If True, remove all non-CONUS entries
+        Remove path < 10, path > 48, row < 25 or row > 43
+    example_flag : bool, optional
+        If True, filter CSV files for example (the default is False).
+        Only keep images in path/row 43/30 for 2015.
+
+    Notes
+    -----
     The following filtering will be applied:
     Remove extreme latitute images (remove row < 100 or row > 9)
     Remove nighttime images (remove sun_elevation < 0)
     Additional filtering can be manually specified in the script
 
-    Args:
-        csv_ws (): workspace of the Landsat bulk metadata CSV files
-        wrs2_tile_list (list): list of Landsat path/rows to process
-            Example: ['p043r032', 'p043r033']
-            Default is []
-        years (str): Comma separated values or ranges of years to download.
-            Example: '1984,2000-2015'
-            Default is '' which will download images for all years
-        months (str): Comma separated values or ranges of months to keep.
-            Example: '1, 2, 3-5'
-            Default is '' which will keep images for all months
-        conus_flag (bool): if True, remove all non-CONUS entries
-            Remove path < 10, path > 48, row < 25 or row > 43
-        example_flag (bool): if True, filter CSV files for example.
-            Only keep images in path/row 43/30 for 2000 and 2015.
     """
     logging.info('\nFilter/reducing Landsat Metdata CSV files')
 
@@ -52,7 +62,7 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
     csv_file_list = [
         'LANDSAT_8_C1.csv',
         'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv'
+        'LANDSAT_TM_C1.csv',
     ]
 
     # Input fields
@@ -86,6 +96,22 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
         # elevation_col, azimuth_col,
         number_col, category_col,
     ]
+    dtype_cols = {
+        browse_col: object,
+        url_col: object,
+        product_col: object,
+        date_col: object,
+        cloud_col: float,
+        path_col: int,
+        row_col: int,
+        data_type_col: object,
+        sensor_col: object,
+        time_col: object,
+        # elevation_col: float,
+        # azimuth_col: float,
+        number_col: object,
+        category_col: object,
+    }
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -97,10 +123,12 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
         csv_path = os.path.join(csv_ws, csv_name)
 
         # Process the CSVs in chunks to limit the memory usage
+        logging.info('  Filtering by chunk')
         temp_path = csv_path.replace('.csv', '_filter.csv')
         for i, input_df in enumerate(pd.read_csv(
                 csv_path, parse_dates=[date_col], chunksize=1 << 16,
-                usecols=use_cols)):
+                # usecols=use_cols)):
+                usecols=list(dtype_cols.keys()), dtype=dtype_cols)):
             logging.debug('\n  Scene count: {}'.format(len(input_df)))
 
             # Remove high latitute rows
@@ -150,94 +178,9 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
                 input_df.to_csv(temp_path, mode='a', index=False, header=True)
             else:
                 input_df.to_csv(temp_path, mode='a', index=False, header=False)
-        shutil.move(temp_path, csv_path)
-
-
-        # # Read in the CSV
-        # try:
-        #     input_df = pd.read_csv(temp_path, parse_dates=[date_col])
-        # except Exception as e:
-        #     logging.warning(
-        #         '  CSV file could not be read or does not exist, skipping')
-        #     logging.debug('  Exception: {}'.format(e))
-        #     continue
-
-        # # parse_dates=[date_col]
-        # # logging.debug('  {}'.format(', '.join(input_df.columns.values)))
-        # # logging.debug(input_df.head())
-        # logging.debug('  Scene count: {}'.format(len(input_df)))
-
-        # # # Remove non-target columns
-        # # for col in list(input_df.columns.values):
-        # #     if col not in use_cols:
-        # #         input_df.drop(col, axis=1, inplace=True)
-
-        # # Keep target columns
-        # input_df = input_df[use_cols]
-
-        # # Remove high latitute rows
-        # if row_col in use_cols:
-        #     input_df = input_df[input_df[row_col] < 100]
-        #     input_df = input_df[input_df[row_col] > 9]
-        #     logging.debug('  Scene count: {}'.format(len(input_df)))
-
-        # # # Remove Tier 2 images
-        # # if data_type_col in use_cols:
-        # #     input_df = input_df[input_df[data_type_col].isin(data_types)]
-
-        # # # Remove Tier 2 images
-        # # if category_col in use_cols:
-        # #     input_df = input_df[input_df[category_col].isin(categories)]
-
-        # # # Remove Landsat 8 images without thermal
-        # # if sensor_col in use_cols:
-        # #     input_df = input_df[input_df[sensor_col].upper() != 'OLI']
-
-        # # Filter by path and row
-        # if path_list and path_col in use_cols:
-        #     logging.debug('  Filtering by path')
-        #     input_df = input_df[input_df[path_col] <= max(path_list)]
-        #     input_df = input_df[input_df[path_col] >= min(path_list)]
-        #     input_df = input_df[input_df[path_col].isin(path_list)]
-        # if row_list and row_col in use_cols:
-        #     logging.debug('  Filtering by row')
-        #     input_df = input_df[input_df[row_col] <= max(row_list)]
-        #     input_df = input_df[input_df[row_col] >= min(row_list)]
-        #     input_df = input_df[input_df[row_col].isin(row_list)]
-        # if wrs2_tile_list and path_col in use_cols and row_col in use_cols:
-        #     logging.debug('  Filtering by path/row')
-        #     try:
-        #         input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
-        #             lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
-        #     except ValueError:
-        #         logging.info('  Possible empty DataFrame, skipping file')
-        #         continue
-        #     input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
-        #     input_df.drop(wrs2_tile_col, axis=1, inplace=True)
-
-        # # Filter by year
-        # if year_list and date_col in use_cols:
-        #     input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
-
-        # # Skip early/late months
-        # if month_list and date_col in use_cols:
-        #     logging.debug('  Filtering by month')
-        #     input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
-
-        # # Remove nighttime images
-        # # (this could be a larger value to remove high latitute images)
-        # if elevation_col in use_cols:
-        #     input_df = input_df[input_df[elevation_col] > 0]
-        # logging.debug('  Scene count: {}'.format(len(input_df)))
-
-        # # # Drop fields
-        # # if browse_col:
-        # #     input_df.drop(browse_col, axis=1, inplace=True)
-
-        # # Save to CSV
-        # input_df.to_csv(csv_path, index=None)
-
-        # del input_df
+            
+        # if os.path.isfile(temp_path):            
+        #     shutil.move(temp_path, csv_path)
 
 
 def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):

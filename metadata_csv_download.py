@@ -14,15 +14,24 @@ except ImportError:
 def main(csv_ws, overwrite_flag=False):
     """Download Landsat Collection 1 bulk metadata CSV GZ files and extract
 
+    Parameters
+    ----------
+    csv_ws : str
+        Workspace of the Landsat bulk metadata CSV files.
+    example_flag : bool, optional
+        If True, only download CSV files needed for 2015 (Landsats 7 and 8).
+        The default is False which will download all CSV files.
+    overwrite_flag : bool, optional
+        If True, overwrite existing CSV files (the default is False).
+
+    Notes
+    -----
     Main Landsat Bulk Metadata Site
     https://landsat.usgs.gov/download-entire-collection-metadata
 
     Example CSV download URL
     https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files/LANDSAT_TM-1980-1989.csv
 
-    Args:
-        csv_ws (str): workspace of the Landsat bulk metadata CSV files
-        overwrite_flag (bool): if True, overwrite existing CSV files
     """
     logging.info('\nDownloading Landsat Bulk Metadata CSV GZ files')
 
@@ -32,7 +41,7 @@ def main(csv_ws, overwrite_flag=False):
     gz_file_list = [
         'LANDSAT_8_C1.csv.gz',
         'LANDSAT_ETM_C1.csv.gz',
-        'LANDSAT_TM_C1.csv.gz'
+        'LANDSAT_TM_C1.csv.gz',
     ]
 
     for gz_name in gz_file_list:
@@ -123,7 +132,7 @@ def is_valid_folder(parser, arg):
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description=('Download Landsat Collection 1 bulk metadata CSV files'),
+        description='Download Landsat Collection 1 bulk metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--csv', type=lambda x: is_valid_folder(parser, x),

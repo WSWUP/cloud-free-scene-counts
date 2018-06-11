@@ -18,27 +18,40 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
          skip_list_path=None, example_flag=False, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
-    Additional filtering can be manually specified in the script
+    Parameters
+    ----------
+    csv_ws : str
+        Workspace of the Landsat bulk metadata CSV files
+    output_folder : str
+        Folder path where the quicklook images will be saved.
+    wrs2_tile_list : list, optional
+        Download images for specified Landsat path/rows.
+        Example: ['p043r032', 'p043r033']
+        Default is [] which will download all images in metadata CSV.
+    years : str, optional
+        Comma separated values or ranges of years to download.
+        Example: '1984,2000-2015'
+        Default is '' which will download images for all years.
+    months : str, optional
+        Comma separated values or ranges of months to download.
+        Example: '1,2,3-5'
+        Default is '' which will download images for all months.
+    skip_list_path : str, optional
+        File path of the Landsat skip list.
+    example_flag : bool, optional
+        If True, onload download images for path/row 43/30 for 2015.
+        The default is False which will download all images in metadata CSV.
+    overwrite_flag : bool, optional
+        If True, overwrite existing files (the default is False).
 
-    Args:
-        csv_ws (str): workspace of the Landsat bulk metadata CSV files
-        output_folder (str): folder path
-        wrs2_tile_list (list): Download images for specified Landsat path/rows.
-            Example: ['p043r032', 'p043r033']
-            Default is [] which will download all images in metadata CSV
-        years (str): Comma separated values or ranges of years to download.
-            Example: '1984,2000-2015'
-            Default is '' which will download images for all years
-        months (str): Comma separated values or ranges of months to download.
-            Example: '1,2,3-5'
-            Default is '' which will download images for all months
-        skip_list_path (str): file path of Landsat skip list
-        example_flag (bool): if True, filter CSV files for example.
-            Only keep images in path/row 43/30 for 2000 and 2015.
-        overwrite_flag (bool): if True, overwrite existing files
+    Returns
+    -------
+    None
 
-    Returns:
-        None
+    Notes
+    -----
+    Additional filtering can be manually specified in the scrips
+
     """
     logging.info('\nDownload Landsat Collection 1 quicklooks')
     cloud_folder_name = 'cloudy'
@@ -54,17 +67,19 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
     # wrs2_tile_list = []
     path_list = []
     row_list = []
+    
+    csv_file_list = [
+        'LANDSAT_8_C1.csv',
+        'LANDSAT_ETM_C1.csv',
+        'LANDSAT_TM_C1.csv',
+    ]
 
     # Filter CSVs for example
     if example_flag:
         wrs2_tile_list = ['p043r030']
-        year_list = [2000, 2015]
-
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv'
-    ]
+        # DEADBEEF - Landsat 5 metadata CSV file is broken
+        year_list = [2015]
+        # year_list = [2000, 2015]
 
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
@@ -446,7 +461,7 @@ def arg_parse():
         '--skiplist', default=None, help='Skips files in skip list')
     parser.add_argument(
         '--example', default=False, action='store_true',
-        help='Filter CSV files for example')
+        help='Download quicklooks for example')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Include existing scenes in scene download list')
