@@ -82,6 +82,8 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
 
     # Login to get API key
     api_key = api_login(username, password)
+    if api_key is None:
+        raise Exception(response["error"])
 
     for landsat, csv_file in csv_names.items():
         logging.info('\n{}'.format(landsat))
@@ -200,8 +202,14 @@ def api_login(username, password):
     logging.debug('\nRetrieving API key')
     payload = json.dumps({"username": username, "password": password})
     r = requests.post(API_URL + 'login', data={"jsonRequest": payload})
+    if r.status_code is not 200:
+        raise Exception(r.text)
+
     api_key = r.json()['data']
     logging.debug('  {}'.format(api_key))
+    if api_key is None:
+        raise Exception(r.json()["error"])
+
     return api_key
 
 
@@ -287,8 +295,6 @@ def arg_parse():
 
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
-    # else:
-    #     args.csv = get_csv_path(os.getcwd())
 
     return args
 
