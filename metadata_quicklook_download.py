@@ -14,14 +14,14 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
-         skip_list_path=None, example_flag=False, overwrite_flag=False):
+def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
+         skip_list_path=None, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
     Parameters
     ----------
     csv_ws : str
-        Workspace of the Landsat bulk metadata CSV files
+        Workspace of the Landsat metadata CSV files
     output_folder : str
         Folder path where the quicklook images will be saved.
     wrs2_tile_list : list, optional
@@ -38,9 +38,6 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         Default is '' which will download images for all months.
     skip_list_path : str, optional
         File path of the Landsat skip list.
-    example_flag : bool, optional
-        If True, onload download images for path/row 43/30 for 2015.
-        The default is False which will download all images in metadata CSV.
     overwrite_flag : bool, optional
         If True, overwrite existing files (the default is False).
 
@@ -53,15 +50,18 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
     Additional filtering can be manually specified in the scrips
 
     """
-    logging.info('\nDownload Landsat Collection 1 quicklooks')
+    logging.info('\nDownload Landsat Collection 1 Quicklooks')
     cloud_folder_name = 'cloudy'
 
     # Custom year filtering can be applied here
-    year_list = sorted(list(parse_int_set(years)))
-    # year_list = list(range(1984, dt.datetime.now().year + 1))
-    # year_list = []
-
-    month_list = sorted(list(parse_int_set(months)))
+    if years is not None:
+        year_list = sorted(list(parse_int_set(years)))
+    else:
+        year_list = []
+    if years is not None:
+        month_list = sorted(list(parse_int_set(months)))
+    else:
+        month_list = []
 
     # Additional/custom path/row filtering can be hardcoded
     # wrs2_tile_list = []
@@ -74,40 +74,49 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         'LANDSAT_TM_C1.csv',
     ]
 
-    # Filter CSVs for example
-    if example_flag:
-        wrs2_tile_list = ['p043r030']
-        # DEADBEEF - Landsat 5 metadata CSV file is broken
-        year_list = [2015]
-        # year_list = [2000, 2015]
-
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
-    # Input fields
-    browse_col = 'browseAvailable'
-    url_col = 'browseURL'
-    product_col = 'LANDSAT_PRODUCT_ID'
-    date_col = 'acquisitionDate'
-    cloud_col = 'CLOUD_COVER_LAND'
-    path_col = 'path'
-    row_col = 'row'
+    # Modified Input fields
+    acq_date_col = 'ACQUISITION_DATE'
+    browse_url_col = 'BROWSE_REFLECTIVE_PATH'
+    col_category_col = 'COLLECTION_CATEGORY'
+    col_number_col = 'COLLECTION_NUMBER'
+    product_id_col = 'LANDSAT_PRODUCT_ID'
+    scene_id_col = 'LANDSAT_SCENE_ID'
     data_type_col = 'DATA_TYPE_L1'
-    sensor_col = 'sensor'
-    number_col = 'COLLECTION_NUMBER'
-    category_col = 'COLLECTION_CATEGORY'
-    # time_col = 'sceneStartTime'
-    # elevation_col = 'sunElevation'
-    # azimuth_col = 'sunAzimuth'
-    # available_col = 'L1_AVAILABLE'
+    wrs2_path_col = 'WRS_PATH'
+    wrs2_row_col = 'WRS_ROW'
+    wrs2_tile_col = 'WRS2_TILE'
 
     # Only load the following columns from the CSV
     input_cols = [
-        browse_col, url_col, product_col, date_col, cloud_col,
-        path_col, row_col, data_type_col, sensor_col,
-        number_col, category_col]
+        acq_date_col, browse_url_col, col_category_col, col_number_col,
+        data_type_col, product_id_col, scene_id_col, wrs2_path_col,
+        wrs2_row_col, wrs2_tile_col]
 
-    # Generated fields
-    wrs2_tile_col = 'PATH_ROW'
+    # # Input fields
+    # acq_date_col = 'acquisitionDate'
+    # browse_col = 'browseAvailable'
+    # browse_url_col = 'browseURL'
+    # cloud_col = 'CLOUD_COVER_LAND'
+    # col_number_col = 'COLLECTION_NUMBER'
+    # col_category_col = 'COLLECTION_CATEGORY'
+    # data_type_col = 'DATA_TYPE_L1'
+    # product_id_col = 'LANDSAT_PRODUCT_ID'
+    # scene_id_col = 'LANDSAT_SCENE_ID'
+    # sensor_col = 'sensor'
+    # wrs2_path_col = 'path'
+    # wrs2_row_col = 'row'
+    # # available_col = 'L1_AVAILABLE'
+    # # time_col = 'sceneStartTime'
+    # # azimuth_col = 'sunAzimuth'
+    # # elevation_col = 'sunElevation'
+
+    # # Only load the following columns from the CSV
+    # input_cols = [
+    #     browse_col, url_col, product_col, date_col, cloud_col,
+    #     path_col, row_col, data_type_col, sensor_col,
+    #     number_col, category_col]
 
     # All other data types and categories will be written to cloudy folder
     # "A1" isn't documented but appear to be good Landsat 7 L1TP images
@@ -120,10 +129,10 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
 
     # Error checking
     if not os.path.isdir(csv_ws):
-        logging.error('The CSV folder {0} doesn\'t exists'.format(csv_ws))
+        logging.error('The CSV folder {} doesn\'t exists'.format(csv_ws))
         sys.exit()
     if skip_list_path and not os.path.isfile(skip_list_path):
-        logging.error('The skip list file {0} doesn\'t exists'.format(
+        logging.error('The skip list file {} doesn\'t exists'.format(
             skip_list_path))
         sys.exit()
 
@@ -134,7 +143,6 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
             skip_list = skip_f.readlines()
             skip_list = [item.strip()[:16] for item in skip_list]
 
-
     logging.info('\nReading metadata CSV files')
     download_list = []
     for csv_name in csv_file_list:
@@ -144,7 +152,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         # Read in the CSV, remove extra columns
         try:
             input_df = pd.read_csv(
-                csv_path, usecols=input_cols, parse_dates=[date_col])
+                csv_path, usecols=input_cols, parse_dates=[acq_date_col])
         except Exception as e:
             logging.warning(
                 '  CSV file could not be read or does not exist, skipping')
@@ -160,19 +168,20 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         # Filter scenes first by path and row separately
         if path_list:
             logging.debug('  Filtering by path')
-            input_df = input_df[input_df[path_col] <= max(path_list)]
-            input_df = input_df[input_df[path_col] >= min(path_list)]
-            input_df = input_df[input_df[path_col].isin(path_list)]
+            input_df = input_df[input_df[wrs2_path_col] <= max(path_list)]
+            input_df = input_df[input_df[wrs2_path_col] >= min(path_list)]
+            input_df = input_df[input_df[wrs2_path_col].isin(path_list)]
         if row_list:
             logging.debug('  Filtering by row')
-            input_df = input_df[input_df[row_col] <= max(row_list)]
-            input_df = input_df[input_df[row_col] >= min(row_list)]
-            input_df = input_df[input_df[row_col].isin(row_list)]
+            input_df = input_df[input_df[wrs2_row_col] <= max(row_list)]
+            input_df = input_df[input_df[wrs2_row_col] >= min(row_list)]
+            input_df = input_df[input_df[wrs2_row_col].isin(row_list)]
 
         # Then filter by path/row combined
+        # DEADBEEF - WRS2_TILE should already be in the file
         try:
-            input_df[wrs2_tile_col] = input_df[[path_col, row_col]].apply(
-                lambda x: wrs2_tile_fmt.format(x[0], x[1]), axis=1)
+            input_df[wrs2_tile_col] = input_df[[wrs2_path_col, wrs2_row_col]]\
+                .apply(lambda x: wrs2_tile_fmt.format(x[0], x[1]), axis=1)
         except ValueError:
             logging.info('  Possible empty DataFrame, skipping file')
             continue
@@ -183,12 +192,12 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         # Filter by year
         if year_list:
             logging.debug('  Filtering by year')
-            input_df = input_df[input_df[date_col].dt.year.isin(year_list)]
+            input_df = input_df[input_df[acq_date_col].dt.year.isin(year_list)]
 
         # Skip early/late months
         if month_list:
             logging.debug('  Filtering by month')
-            input_df = input_df[input_df[date_col].dt.month.isin(month_list)]
+            input_df = input_df[input_df[acq_date_col].dt.month.isin(month_list)]
         # if start_month:
         #     logging.debug('  Filtering by start month')
         #     input_df = input_df[input_df[date_col].dt.month >= start_month]
@@ -196,10 +205,10 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         #     logging.debug('  Filtering by end month')
         #     input_df = input_df[input_df[date_col].dt.month <= end_month]
 
-        # Skip scenes that don't have a browse image
-        if browse_col in input_df.columns.values:
-            logging.debug('  Filtering images without a quicklook')
-            input_df = input_df[input_df[browse_col] != 'N']
+        # # Skip scenes that don't have a browse image
+        # if browse_url_col in input_df.columns.values:
+        #     logging.debug('  Filtering images without a quicklook')
+        #     input_df = input_df[input_df[browse_url_col] != 'N']
 
         logging.debug('  Final scene count: {}'.format(len(input_df)))
         if input_df.empty:
@@ -209,11 +218,12 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
         # Each item is a "row" of data
         for row_index, row_df in input_df.iterrows():
             # logging.debug(row_df)
-            product_id = row_df[product_col].split('_')
+            product_id = row_df[product_id_col].split('_')
             product_id = '_'.join([
                 product_id[0], product_id[2], product_id[3]])
             logging.debug('  {}'.format(product_id))
-            image_dt = row_df[date_col].to_pydatetime()
+            image_dt = row_df[acq_date_col].to_pydatetime()
+
             # sensor = row_dict[sensor_col].upper()
             # path = int(row_df[path_col])
             # row = int(row_df[row_col])
@@ -271,7 +281,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
             #         row_df[cloud_col] >= 90 or
             #         row_df[sensor_col].upper() != 'OLI'):
             if (row_df[data_type_col].upper() not in data_types or
-                    row_df[category_col].upper() not in categories):
+                    row_df[col_category_col].upper() not in categories):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
@@ -293,7 +303,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years='', months='',
 
             # Save download URL and save path
             logging.debug('  {}'.format(product_id))
-            download_list.append([image_path, row_df[url_col]])
+            download_list.append([image_path, row_df[browse_url_col]])
 
     # Download Landsat Look Images
     logging.debug('')
@@ -436,8 +446,8 @@ def parse_int_set(nputstr=""):
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description=('Download Landsat Collection 1 quicklook images\n' +
-                     'Beware that many script parameters are hardcoded.'),
+        description='Download Landsat Collection 1 quicklook images\n'
+                    'Beware that many script parameters are hardcoded.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
         '--csv', type=lambda x: is_valid_folder(parser, x),
@@ -447,21 +457,18 @@ def arg_parse():
     #     '--output', default=sys.path[0], help='Output folder')
     parser.add_argument(
         '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
-        help=('Space separated string of Landsat path/rows to download '
-              '(i.e. -pr p043r032 p043r033)'))
+        help='Space separated string of Landsat path/rows to download '
+             '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
-        '-y', '--years', default='1984-2017', type=str,
+        '-y', '--years', default=None, type=str,
         help='Comma separated list or range of years to download'
              '(i.e. "--years 1984,2000-2015")')
     parser.add_argument(
-        '-m', '--months', default='1-12', type=str,
+        '-m', '--months', default=None, type=str,
         help='Comma separated list or range of months to download'
              '(i.e. "--months 1,2,3-5")')
     parser.add_argument(
         '--skiplist', default=None, help='Skips files in skip list')
-    parser.add_argument(
-        '--example', default=False, action='store_true',
-        help='Download quicklooks for example')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Include existing scenes in scene download list')
@@ -470,12 +477,13 @@ def arg_parse():
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
-    if args.csv and os.path.isfile(os.path.abspath(args.csv)):
+    if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
     # else:
     #     args.csv = get_csv_path(os.getcwd())
     if os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
+
     return args
 
 
@@ -492,5 +500,4 @@ if __name__ == '__main__':
 
     main(csv_ws=args.csv, output_folder=args.output,
          wrs2_tile_list=args.pathrows, years=args.years, months=args.months,
-         skip_list_path=args.skiplist, example_flag=args.example,
-         overwrite_flag=args.overwrite)
+         skip_list_path=args.skiplist, overwrite_flag=args.overwrite)

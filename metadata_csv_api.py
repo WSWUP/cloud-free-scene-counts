@@ -42,15 +42,15 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
     logging.info('\nDownloading Filtered Landsat Metadata CSV files')
 
     # Search result fields (renamed to better match XML metadata field names)
-    url_col = 'BROWSE_REFLECTIVE_PATH'
+    acq_date_col = 'ACQUISITION_DATE'
+    browse_url_col = 'BROWSE_REFLECTIVE_PATH'
+    col_category_col = 'COLLECTION_CATEGORY'
+    col_number_col = 'COLLECTION_NUMBER'
     product_id_col = 'LANDSAT_PRODUCT_ID'
     scene_id_col = 'LANDSAT_SCENE_ID'
-    date_col = 'ACQUISITION_DATE'
-    path_col = 'WRS_PATH'
-    row_col = 'WRS_ROW'
     data_type_col = 'DATA_TYPE_L1'
-    col_number_col = 'COLLECTION_NUMBER'
-    col_category_col = 'COLLECTION_CATEGORY'
+    wrs2_path_col = 'WRS_PATH'
+    wrs2_row_col = 'WRS_ROW'
 
     # Derived field
     wrs2_tile_col = 'WRS2_TILE'
@@ -169,26 +169,26 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
                 columns={
                     'displayId': product_id_col,
                     'entityId': scene_id_col,
-                    'browseUrl': url_col,
-                    'acquisitionDate': date_col,
+                    'browseUrl': browse_url_col,
+                    'acquisitionDate': acq_date_col,
                 },
                 inplace=True)
             # output_df[sensor_col] = output_df[product_col].str.slice(0, 4)
             output_df[data_type_col] = output_df[product_id_col].str.slice(5, 9)
-            output_df[path_col] = output_df[product_id_col]\
+            output_df[wrs2_path_col] = output_df[product_id_col]\
                 .str.slice(10, 13).astype(int)
-            output_df[row_col] = output_df[product_id_col]\
+            output_df[wrs2_row_col] = output_df[product_id_col]\
                 .str.slice(13, 16).astype(int)
             output_df[col_number_col] = output_df[product_id_col]\
                 .str.slice(35, 37).astype(int)
             output_df[col_category_col] = output_df[product_id_col]\
                 .str.slice(38, 40)
-            output_df[wrs2_tile_col] = output_df[[path_col, row_col]].apply(
-                lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+            output_df[wrs2_tile_col] = output_df[[wrs2_path_col, wrs2_row_col]]\
+                .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
 
             # Apply basic high latitude filtering based on path
-            output_df = output_df[output_df[row_col] < 100]
-            output_df = output_df[output_df[row_col] > 9]
+            output_df = output_df[output_df[wrs2_row_col] < 100]
+            output_df = output_df[output_df[wrs2_row_col] > 9]
 
             if not output_df.empty:
                 logging.debug('\nSaving CSV')

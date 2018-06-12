@@ -26,10 +26,10 @@ The "..\" or "../" notation in the script call indicates that Python should look
 
 #### Filter CSV files
 
-The Landsat bulk metadata CSV files can be filtered to match those provided in the example folder by running the "metadata_csv_filter.py" script with the the "--example" command line argument.
+The Landsat bulk metadata CSV files can be filtered to match those provided in the example folder by running the "metadata_csv_filter.py" script with the command line arguments seen below.
 
 ```
-python ..\metadata_csv_filter.py --example
+python ..\metadata_csv_filter.py -pr p043r030 -y 2000,2015
 ```
 
 #### Download Landsat Quicklooks

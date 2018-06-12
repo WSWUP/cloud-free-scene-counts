@@ -145,10 +145,11 @@ def arg_parse():
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
-    if args.csv and os.path.isfile(os.path.abspath(args.csv)):
+    if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
     # else:
     #     args.csv = get_csv_path(os.getcwd())
+
     return args
 
 
