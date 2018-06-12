@@ -27,7 +27,8 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
         Comma separated values or ranges of years to download.
         Example: '1984,2000-2015'
     csv_ws : str, optional
-        Output workspace (the default is the current working directory).
+        Folder path where the metadata CSV files will be saved
+         (the default is the current working directory).
     months : str, optional
         Comma separated values or ranges of months to keep.
         Example: '1, 2, 3-5'.
@@ -39,7 +40,7 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
     Remove extreme latitude images (remove row < 100 or row > 9)
 
     """
-    logging.info('\nDownloading Filtered Landsat Metadata CSV files')
+    logging.info('\nDownloading Landsat Metadata CSV files')
 
     # Search result fields (renamed to better match XML metadata field names)
     acq_date_col = 'ACQUISITION_DATE'
@@ -82,8 +83,6 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
 
     # Login to get API key
     api_key = api_login(username, password)
-    if api_key is None:
-        raise Exception(response["error"])
 
     for landsat, csv_file in csv_names.items():
         logging.info('\n{}'.format(landsat))
@@ -269,7 +268,7 @@ def parse_int_set(nputstr=""):
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description='Download filtered Landsat Collection 1 metadata CSV files',
+        description='Download Landsat Collection 1 metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('username', help='USGS Earth Explorer Username')
     parser.add_argument('password', help='USGS Earth Explorer Password')

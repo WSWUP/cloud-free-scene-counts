@@ -16,20 +16,17 @@ def main(csv_ws, overwrite_flag=False):
 
     Parameters
     ----------
-    csv_ws : str
-        Workspace of the Landsat bulk metadata CSV files.
-    example_flag : bool, optional
-        If True, only download CSV files needed for 2015 (Landsats 7 and 8).
-        The default is False which will download all CSV files.
+    csv_folder : str
+        Folder path where the Landsat bulk metadata CSV files will be saved.
     overwrite_flag : bool, optional
         If True, overwrite existing CSV files (the default is False).
 
     Notes
     -----
-    Main Landsat Bulk Metadata Site
+    Main Landsat Bulk Metadata Site:
     https://landsat.usgs.gov/download-entire-collection-metadata
 
-    Example CSV download URL
+    Example CSV download URL:
     https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files/LANDSAT_TM-1980-1989.csv
 
     """
@@ -135,7 +132,7 @@ def arg_parse():
         description='Download Landsat Collection 1 bulk metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x),
+        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
         default=os.getcwd(), help='Landsat bulk metadata CSV folder')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
@@ -147,8 +144,6 @@ def arg_parse():
 
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
-    # else:
-    #     args.csv = get_csv_path(os.getcwd())
 
     return args
 
@@ -158,4 +153,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_ws=args.csv, overwrite_flag=args.overwrite)
+    main(csv_folder=args.csv, overwrite_flag=args.overwrite)

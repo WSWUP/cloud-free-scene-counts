@@ -17,7 +17,7 @@ For information on installing Python and Pandas or details on how to run the Pyt
 
 ## Download Landsat Bulk Metadata CSV files
 
-The starting point for generating monthly cloud free scene counts is to obtain the Landsat bulk metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The  CSV files can be downloaded by running the provided python script "metadata_csv_download.py" or manually from the [Landsat Bulk Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
+The starting point for generating monthly cloud free scene counts is to obtain the Landsat bulk metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The CSV files can be downloaded by running the provided python script "metadata_csv_download.py" or manually from the [Landsat Bulk Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
 
 ```
 python metadata_csv_download.py
@@ -25,13 +25,7 @@ python metadata_csv_download.py
 
 ## Filter/reduce Landsat Bulk Metadata CSV files
 
-The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  If the "--conus" command line argument is used (see below), all non-CONUS Landsat path/rows will be removed from the metadata.
-
-```
-python metadata_csv_filter.py --conus
-```
-
-Path/row specific filtering can also be applied using the "-pr" or "--pathrows" argument.
+The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  Path/row specific filtering can also be applied using the "-pr" or "--pathrows" argument.
 
 ```
 python metadata_csv_filter.py -pr p043r032 p043r33

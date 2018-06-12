@@ -9,14 +9,13 @@ import sys
 import pandas as pd
 
 
-def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
-         example_flag=False):
+def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
     Parameters
     ----------
-    csv_ws : str
-        Workspace of the Landsat bulk metadata CSV files.
+    csv_folder : str
+        Folder path of the Landsat bulk metadata CSV files.
     wrs2_tile_list : list, optional
         Landsat path/rows to process
         Example: ['p043r032', 'p043r033']
@@ -24,24 +23,20 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
     years : str, optional
         Comma separated values or ranges of years to download.
         Example: '1984,2000-2015'
-        Default is '' which will download images for all years
+        Default is '' which will download images for all years.
     months : str, optional
         Comma separated values or ranges of months to keep.
         Example: '1, 2, 3-5'
-        Default is '' which will keep images for all months
+        Default is '' which will keep images for all months.
     conus_flag : bool, optional
-        If True, remove all non-CONUS entries
-        Remove path < 10, path > 48, row < 25 or row > 43
-    example_flag : bool, optional
-        If True, filter CSV files for example (the default is False).
-        Only keep images in path/row 43/30 for 2015.
+        If True, remove all non-CONUS entries.
+        Remove path < 10, path > 48, row < 25 or row > 43.
 
     Notes
     -----
     The following filtering will be applied:
-    Remove extreme latitude images (remove row < 100 or row > 9)
-    Remove nighttime images (remove sun_elevation < 0)
-    Additional filtering can be manually specified in the script
+        Remove extreme latitude images (remove row < 100 or row > 9)
+        Additional filtering can be manually specified in the script
 
     """
     logging.info('\nFilter/reducing Landsat Metadata CSV files')
@@ -56,9 +51,6 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
     if conus_flag:
         path_list = list(range(10, 49))
         row_list = list(range(25, 44))
-    if example_flag:
-        wrs2_tile_list = ['p043r030']
-        year_list = [2000, 2015]
 
     csv_file_list = [
         'LANDSAT_8_C1.csv',
@@ -350,6 +342,8 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False,
             #     input_df = input_df[input_df[elevation_col] > 0]
             # logging.debug('  Scene count: {}'.format(len(input_df)))
 
+            input_df.sort_index(axis=1, inplace=True)
+
             if i == 0:
                 input_df.to_csv(temp_path, mode='w', index=False, header=True)
             else:
@@ -462,7 +456,7 @@ def arg_parse():
         description='Filter Landsat Collection 1 bulk metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x),
+        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
         default=os.getcwd(), help='Landsat bulk metadata CSV folder')
     parser.add_argument(
         '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
@@ -480,17 +474,12 @@ def arg_parse():
         '--conus', default=False, action='store_true',
         help='Filter CSV files to only CONUS Landsat images')
     parser.add_argument(
-        '--example', default=False, action='store_true',
-        help='Filter CSV files for example')
-    parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
-    # else:
-    #     args.csv = get_csv_path(os.getcwd())
 
     return args
 
@@ -500,6 +489,5 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_ws=args.csv, wrs2_tile_list=args.pathrows,
-         years=args.years, months=args.months,
-         conus_flag=args.conus, example_flag=args.example)
+    main(csv_folder=args.csv, wrs2_tile_list=args.pathrows,
+         years=args.years, months=args.months, conus_flag=args.conus)

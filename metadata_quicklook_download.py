@@ -14,14 +14,14 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
+def main(csv_folder, output_folder, wrs2_tile_list=[], years=None, months=None,
          skip_list_path=None, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
     Parameters
     ----------
-    csv_ws : str
-        Workspace of the Landsat metadata CSV files
+    csv_folder : str
+        Folder path of the Landsat metadata CSV files.
     output_folder : str
         Folder path where the quicklook images will be saved.
     wrs2_tile_list : list, optional
@@ -47,7 +47,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
 
     Notes
     -----
-    Additional filtering can be manually specified in the scrips
+    Additional filtering can be manually specified in the scripts
 
     """
     logging.info('\nDownload Landsat Collection 1 Quicklooks')
@@ -76,7 +76,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
 
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
-    # Modified Input fields
+    # Input fields
     acq_date_col = 'ACQUISITION_DATE'
     browse_url_col = 'BROWSE_REFLECTIVE_PATH'
     col_category_col = 'COLLECTION_CATEGORY'
@@ -128,8 +128,8 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
         wrs2_tile_list, path_list, row_list)
 
     # Error checking
-    if not os.path.isdir(csv_ws):
-        logging.error('The CSV folder {} doesn\'t exists'.format(csv_ws))
+    if not os.path.isdir(csv_folder):
+        logging.error('The CSV folder {} doesn\'t exists'.format(csv_folder))
         sys.exit()
     if skip_list_path and not os.path.isfile(skip_list_path):
         logging.error('The skip list file {} doesn\'t exists'.format(
@@ -147,7 +147,7 @@ def main(csv_ws, output_folder, wrs2_tile_list=[], years=None, months=None,
     download_list = []
     for csv_name in csv_file_list:
         logging.info('{}'.format(csv_name))
-        csv_path = os.path.join(csv_ws, csv_name)
+        csv_path = os.path.join(csv_folder, csv_name)
 
         # Read in the CSV, remove extra columns
         try:
@@ -450,11 +450,11 @@ def arg_parse():
                     'Beware that many script parameters are hardcoded.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x),
-        default=os.getcwd(), help='Landsat bulk metadata CSV folder')
+        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
+        default=os.getcwd(), help='Landsat metadata CSV folder')
     parser.add_argument(
-        '--output', default=os.getcwd(), help='Output folder')
-    #     '--output', default=sys.path[0], help='Output folder')
+        '--output', default=os.getcwd(), metavar='FOLDER',
+        help='Output folder')
     parser.add_argument(
         '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
         help='Space separated string of Landsat path/rows to download '
@@ -479,8 +479,6 @@ def arg_parse():
 
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
-    # else:
-    #     args.csv = get_csv_path(os.getcwd())
     if os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
 
@@ -498,6 +496,6 @@ if __name__ == '__main__':
     logging.info('{0:<20s} {1}'.format(
         'Script:', os.path.basename(sys.argv[0])))
 
-    main(csv_ws=args.csv, output_folder=args.output,
+    main(csv_folder=args.csv, output_folder=args.output,
          wrs2_tile_list=args.pathrows, years=args.years, months=args.months,
          skip_list_path=args.skiplist, overwrite_flag=args.overwrite)
