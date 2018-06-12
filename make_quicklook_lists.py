@@ -128,7 +128,8 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tile_list=[],
 
     logging.debug('\nQuicklook PRODUCT_ID lookup:')
     logging.debug(pprint.pformat(quicklook_ids))
-    input('ENTER')
+    logging.debug('')
+    # input('ENTER')
 
     output_keep_list = []
     output_skip_list = []
