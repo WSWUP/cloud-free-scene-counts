@@ -11,7 +11,7 @@ except ImportError:
     import urllib as urlrequest
 
 
-def main(csv_ws, overwrite_flag=False):
+def main(csv_folder, overwrite_flag=False):
     """Download Landsat Collection 1 bulk metadata CSV GZ files and extract
 
     Parameters
@@ -45,8 +45,8 @@ def main(csv_ws, overwrite_flag=False):
         logging.info('{}'.format(gz_name))
         csv_name = gz_name.replace('.gz', '')
 
-        gz_path = os.path.join(csv_ws, gz_name)
-        csv_path = os.path.join(csv_ws, csv_name)
+        gz_path = os.path.join(csv_folder, gz_name)
+        csv_path = os.path.join(csv_folder, csv_name)
         file_url = '{}/{}'.format(download_url, gz_name)
 
         # Don't redownload unless overwrite or both files don't exist
