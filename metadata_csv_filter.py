@@ -9,7 +9,7 @@ import sys
 import pandas as pd
 
 
-def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False):
+def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
     Parameters
@@ -154,7 +154,7 @@ def main(csv_ws, wrs2_tile_list=[], years='', months='', conus_flag=False):
     # Process each CSV
     for csv_name in csv_file_list:
         logging.info('{}'.format(csv_name))
-        csv_path = os.path.join(csv_ws, csv_name)
+        csv_path = os.path.join(csv_folder, csv_name)
 
         # DEADBEEF - Attempt at fixing issues in Metadata CSV files
         # Currently the Landsat 7 file is missing large amounts of data,

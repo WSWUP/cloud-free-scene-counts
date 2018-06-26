@@ -11,7 +11,7 @@ import pandas as pd
 API_URL = 'https://earthexplorer.usgs.gov/inventory/json/v/1.4.0/'
 
 
-def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
+def main(username, password, wrs2_tile_list, years, csv_folder=os.getcwd(),
          months=''):
     """Download filtered Landsat Collection 1 metadata CSV files
 
@@ -26,7 +26,7 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
     years : str
         Comma separated values or ranges of years to download.
         Example: '1984,2000-2015'
-    csv_ws : str, optional
+    csv_folder : str, optional
         Folder path where the metadata CSV files will be saved
          (the default is the current working directory).
     months : str, optional
@@ -87,7 +87,7 @@ def main(username, password, wrs2_tile_list, years, csv_ws=os.getcwd(),
     for landsat, csv_file in csv_names.items():
         logging.info('\n{}'.format(landsat))
 
-        output_path = os.path.join(csv_ws, csv_file)
+        output_path = os.path.join(csv_folder, csv_file)
         logging.debug('  CSV: {}'.format(csv_file))
 
         # Filter year list by Landsat type
@@ -303,5 +303,5 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(username=args.username, password=args.password, csv_ws=args.csv,
+    main(username=args.username, password=args.password, csv_folder=args.csv,
          wrs2_tile_list=args.pathrows, years=args.years, months=args.months)
