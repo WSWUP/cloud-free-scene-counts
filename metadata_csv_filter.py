@@ -60,22 +60,36 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
 
     # Input fields
     acq_date_col = 'acquisitionDate'
-    browse_col = 'browseAvailable'
     browse_url_col = 'browseURL'
     cloud_col = 'CLOUD_COVER_LAND'
     col_number_col = 'COLLECTION_NUMBER'
     col_category_col = 'COLLECTION_CATEGORY'
-    data_type_col = 'DATA_TYPE_L1'
     product_id_col = 'LANDSAT_PRODUCT_ID'
-    scene_id_col = 'LANDSAT_SCENE_ID'
+    scene_id_col = 'sceneID'
     sensor_col = 'sensor'
     time_col = 'sceneStartTime'
+    data_type_col = 'DATA_TYPE_L1'
     wrs2_path_col = 'path'
     wrs2_row_col = 'row'
+    # browse_col = 'browseAvailable'
     # available_col = 'L1_AVAILABLE'
     # utm_zone = 'UTM_ZONE'  # Not in L8 file
     # azimuth_col = 'sunAzimuth'
     # elevation_col = 'sunElevation'
+
+    # Output fieldnames: matches metadata_csv_api.py and newer style formatting
+    acq_date_col_out = 'ACQUISITION_DATE'
+    browse_url_col_out = 'BROWSE_REFLECTIVE_PATH'
+    cloud_col_out = 'CLOUD_COVER_LAND'
+    col_number_col_out = 'COLLECTION_NUMBER'
+    col_category_col_out = 'COLLECTION_CATEGORY'
+    product_id_col_out = 'LANDSAT_PRODUCT_ID'
+    scene_id_col_out = 'LANDSAT_SCENE_ID'
+    sensor_col_out = 'SENSOR'
+    time_col_out = 'SCENE_START_TIME'
+    data_type_col_out = 'DATA_TYPE_L1'
+    wrs2_path_col_out = 'WRS_PATH'
+    wrs2_row_col_out = 'WRS_ROW'
 
     # Generated fields
     wrs2_tile_col = 'WRS2_TILE'
@@ -85,14 +99,19 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
 
     # Only load the following columns from the CSV
     use_cols = [
-        acq_date_col, browse_col, browse_url_col, cloud_col,
-        col_category_col, col_number_col, data_type_col, product_id_col,
-        scene_id_col, sensor_col, time_col, wrs2_path_col, wrs2_row_col,
-        # azimuth_col, elevation_col
-    ]
+        acq_date_col, browse_url_col, cloud_col,
+        col_category_col, col_number_col, data_type_col,
+        product_id_col, scene_id_col, sensor_col, time_col,
+        wrs2_path_col, wrs2_row_col]
+
+    out_cols = [
+        acq_date_col_out, browse_url_col_out, cloud_col_out,
+        col_category_col_out, col_number_col_out, data_type_col_out,
+        product_id_col_out, scene_id_col_out, sensor_col_out, time_col_out,
+        wrs2_path_col_out, wrs2_row_col_out, wrs2_tile_col]
+
     dtype_cols = {
         acq_date_col: object,
-        browse_col: object,
         browse_url_col: object,
         col_number_col: object,
         col_category_col: object,
@@ -103,10 +122,11 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
         sensor_col: object,
         time_col: object,
         wrs2_path_col: int,
-        wrs2_row_col: int,
+        wrs2_row_col: int}
         # elevation_col: float,
         # azimuth_col: float,
-    }
+        # browse_col: object,
+        # scene_id_col: object,
 
     # Remap download station strings in Landsat 7 file to just the code
     stations = {
@@ -142,10 +162,10 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
         'UPR - Mayaguez, Puerto Rico': 'UPR',
     }
 
-    product_re = re.compile(
-        '(LT05|LE07|LC08)_\w{4}_\d{6}_\d{8}_\d{8}_\d{2}_\w{2}')
-    # The download station SGI is listed as SG1 in a couple of scenes
-    scene_re = re.compile('(LT5|LE7|LC8)\d{13}\D{2}\w\d{2}')
+    # product_re = re.compile(
+    #     '(LT05|LE07|LC08)_\w{4}_\d{6}_\d{8}_\d{8}_\d{2}_\w{2}')
+    # # The download station SGI is listed as SG1 in a couple of scenes
+    # scene_re = re.compile('(LT5|LE7|LC8)\d{13}\D{2}\w\d{2}')
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -156,147 +176,13 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_folder, csv_name)
 
-        # DEADBEEF - Attempt at fixing issues in Metadata CSV files
-        # Currently the Landsat 7 file is missing large amounts of data,
-        #   and can not be "fixed" with a script.
-        if csv_name == 'LANDSAT_ETM_C1.csv':
-            logging.info(
-                '  Removing extra commas from "receivingStation" column')
-            mod_path = csv_path.replace('.csv', '_temp.csv')
-
-            # First remove extra commas from receiving station text
-            with open(csv_path, 'r') as input_f:
-                header = input_f.readline().strip().split(',')
-                cols = len(header)
-
-                # date_i = header.index(acq_date_col)
-                # browse_i = header.index(browse_url_col)
-                # cloud_i = header.index(cloud_col)
-                # col_number_i = header.index(col_number_col)
-                # col_category_i = header.index(col_category_col)
-                # product_id_i = header.index(product_id_col)
-                # scene_id_i = header.index('sceneID')
-                # station_i = header.index('receivingStation')
-                # path_i = header.index(wrs2_path_col)
-                # row_i = header.index(wrs2_row_col)
-                # ulcl_i = header.index('upperLeftCornerLongitude')
-                # utm_i = header.index('UTM_ZONE')
-
-                with open(mod_path, 'w') as output_f:
-                    output_f.write(','.join(header) + '\n')
-                    
-                    for line_i, line in enumerate(input_f):
-
-                        # Replace receiving station with station ID
-                        for k, v in stations.items():
-                            if k in line:
-                                line = line.replace(k, v)
-
-                        line = line.strip()
-                        line_split = line.split(',')
-
-                        # DEADBEEF - Commented out until Landsat 7 file is fixed
-                        # # if line_i == 1:
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     print('')
-                        # #     # input('ENTER')
-                        #
-                        # if '043030_20150813' in line:
-                        #     print(line_i, line)
-                        #     input('ENTER')
-                        #
-                        # # if (line_split[path_i] == '43' and line_split[row_i] == '30' and
-                        # #         line_split[date_i] >= '2015-01-01' and
-                        # #         line_split[date_i] <= '2015-12-31'):
-                        # #     print(line_i, line)
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        #
-                        # # Starting at line 1200000, a "15" is injected after T1
-                        # if (line_i >= 1200000 and
-                        #         not scene_re.match(line_split[scene_id_i]) and
-                        #         scene_re.match(line_split[station_i]) and
-                        #         line_split[ulcl_i] == '15'):
-                        #     if ',T1,15,' in line:
-                        #         logging.debug('  Line {} - Fixing "T1,15"'.format(line_i))
-                        #         line = line.replace(',T1,15,', ',T1,')
-                        #     elif ',T2,15,' in line:
-                        #         logging.debug('  Line {} - Fixing "T2,15"'.format(line_i))
-                        #         line = line.replace(',T2,15,', ',T2,')
-                        #     elif ',RT,15,' in line:
-                        #         logging.debug('  Line {} - Fixing "RT,15"'.format(line_i))
-                        #         line = line.replace(',RT,15,', ',T2,')
-                        #     line_split = line.split(',')
-                        #     # pprint.pprint(list(zip(header, line_split)))
-                        #
-                        # # # Check the output values
-                        # # if line_i >= 1200000:
-                        # if len(line_split) != cols:
-                        #     print('\n{} - {}'.format(line_i, 'Invalid Column Count'))
-                        #     print(line)
-                        #     pprint.pprint(list(zip(header, line.split(','))))
-                        #     input('ENTER')
-                        # # elif not scene_re.match(line_split[scene_i]):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid SCENE_ID'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif not product_re.match(line_split[product_i]):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid PRODUCT_ID'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif len(line_split[station_i]) != 3:
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Station'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif not line_split[browse_i].startswith('https://'):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid browseURL'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif (not line_split[cloud_i].isdigit() or
-                        # #         int(line_split[cloud_i]) < 0 or
-                        # #         int(line_split[cloud_i]) > 100):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Cloud Cover'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif line_split[col_number_i] not in ['1', '2']:
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Collection Number'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif line_split[col_category_i] not in ['T1', 'T2', 'RT']:
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Collection Category'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif (not line_split[utm_i] in [''] + list(map(str, range(1, 61)))):
-                        # #     # Some UTM zones are empty strings?
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid UTM Zone'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif (not line_split[path_i].isdigit() or
-                        # #       not line_split[path_i] in map(str, range(1, 234))):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Path'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-                        # # elif (not line_split[row_i].isdigit() or
-                        # #         not line_split[row_i] in map(str, range(1, 249))):
-                        # #     print('\n{} - {}'.format(line_i, 'Invalid Row'))
-                        # #     pprint.pprint(list(zip(header, line.split(','))))
-                        # #     input('ENTER')
-
-                        output_f.write(line + '\n')   
-                        
-            # Replace original file with modified file
-            shutil.move(mod_path, csv_path)
-
-        # elif csv_name == 'LANDSAT_TM_C1.csv':
-        #     continue
-
         # Process the CSVs in chunks to limit the memory usage
         logging.info('  Filtering by chunk')
         temp_path = csv_path.replace('.csv', '_filter.csv')
         for i, input_df in enumerate(pd.read_csv(
                 csv_path, parse_dates=[acq_date_col], chunksize=1 << 16,
-                # usecols=use_cols)):
-                usecols=list(dtype_cols.keys()), dtype=dtype_cols)):
+                usecols=use_cols)):
+                # usecols=list(dtype_cols.keys()), dtype=dtype_cols)):
             logging.debug('\n  Scene count: {}'.format(len(input_df)))
 
             # Remove high latitute rows
@@ -316,16 +202,19 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
                 input_df = input_df[input_df[wrs2_row_col] <= max(row_list)]
                 input_df = input_df[input_df[wrs2_row_col] >= min(row_list)]
                 input_df = input_df[input_df[wrs2_row_col].isin(row_list)]
-            if wrs2_tile_list and wrs2_path_col in use_cols and wrs2_row_col in use_cols:
+            if wrs2_tile_list and wrs2_path_col in use_cols and\
+                    wrs2_row_col in use_cols:
                 logging.debug('  Filtering by path/row')
                 try:
-                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col, wrs2_row_col]]\
-                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col,
+                                                        wrs2_row_col]]\
+                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]),
+                               axis=1)
                 except ValueError:
                     logging.info('  Possible empty DataFrame, skipping file')
                     continue
                 input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
-                input_df.drop(wrs2_tile_col, axis=1, inplace=True)
+                # input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
             # Filter by year
             if year_list and acq_date_col in use_cols:
@@ -344,13 +233,19 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
 
             input_df.sort_index(axis=1, inplace=True)
 
+            # Reorder and rename columns to match metadata_csv_api.py
+            # newer style name format
+            input_df = input_df[use_cols + [wrs2_tile_col]]
+            input_df.columns = out_cols
+
+            # write dataframe to csv
             if i == 0:
                 input_df.to_csv(temp_path, mode='w', index=False, header=True)
             else:
                 input_df.to_csv(temp_path, mode='a', index=False, header=False)
-            
-        # if os.path.isfile(temp_path):
-        #     shutil.move(temp_path, csv_path)
+        # overwrite metadata csv with filter csv
+        if os.path.isfile(temp_path):
+            shutil.move(temp_path, csv_path)
 
 
 def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
