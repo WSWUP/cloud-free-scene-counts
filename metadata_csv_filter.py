@@ -58,7 +58,7 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
         'LANDSAT_TM_C1.csv',
     ]
 
-    # Input fields
+    # Input fields (default values in bulk metadata CSV file)
     acq_date_col = 'acquisitionDate'
     browse_url_col = 'browseURL'
     cloud_col = 'CLOUD_COVER_LAND'
@@ -77,7 +77,7 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
     # azimuth_col = 'sunAzimuth'
     # elevation_col = 'sunElevation'
 
-    # Output fieldnames: matches metadata_csv_api.py and newer style formatting
+    # Output fieldnames (matches metadata_csv_api.py and newer style formatting)
     acq_date_col_out = 'ACQUISITION_DATE'
     browse_url_col_out = 'BROWSE_REFLECTIVE_PATH'
     cloud_col_out = 'CLOUD_COVER_LAND'
@@ -94,78 +94,21 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
     # Generated fields
     wrs2_tile_col = 'WRS2_TILE'
 
-    # data_types = ['L1TP']
-    # categories = ['T1', 'RT']
-
-    # Only load the following columns from the CSV
+    # Field rename mapping
     use_cols = [
-        acq_date_col, browse_url_col, cloud_col,
-        col_category_col, col_number_col, data_type_col,
-        product_id_col, scene_id_col, sensor_col, time_col,
-        wrs2_path_col, wrs2_row_col]
-
-    out_cols = [
-        acq_date_col_out, browse_url_col_out, cloud_col_out,
-        col_category_col_out, col_number_col_out, data_type_col_out,
-        product_id_col_out, scene_id_col_out, sensor_col_out, time_col_out,
-        wrs2_path_col_out, wrs2_row_col_out, wrs2_tile_col]
-
-    dtype_cols = {
-        acq_date_col: object,
-        browse_url_col: object,
-        col_number_col: object,
-        col_category_col: object,
-        cloud_col: float,
-        data_type_col: object,
-        product_id_col: object,
-        scene_id_col: object,
-        sensor_col: object,
-        time_col: object,
-        wrs2_path_col: int,
-        wrs2_row_col: int}
-        # elevation_col: float,
-        # azimuth_col: float,
-        # browse_col: object,
-        # scene_id_col: object,
-
-    # Remap download station strings in Landsat 7 file to just the code
-    stations = {
-        'AGS - Poker Flats, Alaska, USA': 'AGS',
-        'ASA - Alice Springs, Austrailia': 'ASA',   # Spelling
-        # 'ASA - Alice Springs, Australia': 'ASA',
-        'ASN - Alice Springs, Australia': 'ASN',
-        'BJC - Beijing, China': 'BJC',
-        'BKT - Bangkok, Thailand': 'BKT',
-        'COA - Cordoba, Argentina': 'COA',
-        'CUB - Cuiaba, Brazil': 'CUB',
-        'DKI - Parepare, Indonesia': 'DKI',
-        'EDC Sioux Falls, South Dakota, USA (aka LGS)': 'EDC',
-        'EDC - Sioux Falls, South Dakota, USA (aka LGS)': 'EDC',
-        'FUI - Fucino, Italy': 'FUI',
-        'GNC -  Gatineau, Canada': 'GNC',       # Extra space
-        'GNC - Gatineau, Canada': 'GNC',
-        'HAJ - Hatoyama, Japan': 'HAJ',
-        'HIJ - Hiroshima, Japan': 'HIJ',
-        'HOA - Hobart, Australia': 'HOA',
-        'JSA': 'JSA',
-        'KIS - Kiruna, Sweden': 'KIS',
-        'LBG': 'LBG',
-        'MPS - Maspalomas, Spain': 'MPS',
-        'MTI - Matera, Italy': 'MTI',
-        'NSG - Neustreliz, Germany': 'NSG',
-        'NPA - North Pole, Alaska': 'NPA',
-        'PAC - Prince Albert, Canada': 'PAC',
-        'PFS - Poker Flats, Alaska': 'PFS',
-        'SGS - Svalbard, Norway': 'SGS',
-        'SGI - Shadnagar, India': 'SGI',
-        'SG1': 'SGI',                           # Should this be SGI or SG1?
-        'UPR - Mayaguez, Puerto Rico': 'UPR',
-    }
-
-    # product_re = re.compile(
-    #     '(LT05|LE07|LC08)_\w{4}_\d{6}_\d{8}_\d{8}_\d{2}_\w{2}')
-    # # The download station SGI is listed as SG1 in a couple of scenes
-    # scene_re = re.compile('(LT5|LE7|LC8)\d{13}\D{2}\w\d{2}')
+        [acq_date_col, acq_date_col_out],
+        [browse_url_col, browse_url_col_out],
+        [cloud_col, cloud_col_out],
+        [col_category_col, col_category_col_out],
+        [col_number_col, col_number_col_out],
+        [data_type_col, data_type_col_out],
+        [product_id_col, product_id_col_out],
+        [scene_id_col, scene_id_col_out],
+        [sensor_col, sensor_col_out],
+        [time_col, time_col_out],
+        [wrs2_path_col, wrs2_path_col_out],
+        [wrs2_row_col, wrs2_row_col_out],
+    ]
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -179,37 +122,48 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
         # Process the CSVs in chunks to limit the memory usage
         logging.info('  Filtering by chunk')
         temp_path = csv_path.replace('.csv', '_filter.csv')
-        for i, input_df in enumerate(pd.read_csv(
-                csv_path, parse_dates=[acq_date_col], chunksize=1 << 16,
-                usecols=use_cols)):
-                # usecols=list(dtype_cols.keys()), dtype=dtype_cols)):
+        for i, input_df in enumerate(pd.read_csv(csv_path, chunksize=1 << 16)):
             logging.debug('\n  Scene count: {}'.format(len(input_df)))
 
-            # Remove high latitute rows
-            if wrs2_row_col in use_cols:
-                input_df = input_df[input_df[wrs2_row_col] < 100]
-                input_df = input_df[input_df[wrs2_row_col] > 9]
+            # Rename fields before filtering
+            for input_col, output_col in use_cols:
+                if input_col in input_df.columns:
+                    input_df.rename(columns={input_col: output_col}, inplace=True)
+
+            # Manually convert date string to datetime
+            # Can't use parse_dates in read_csv() since we are not sure which
+            #   field is present.
+            if acq_date_col in input_df.columns:
+                input_df[acq_date_col] = pd.to_datetime(
+                    input_df[acq_date_col], infer_datetime_format=True)
+            if acq_date_col_out in input_df.columns:
+                input_df[acq_date_col_out] = pd.to_datetime(
+                    input_df[acq_date_col_out], infer_datetime_format=True)
+
+            # Remove high latitude rows
+            if wrs2_row_col_out in input_df.columns:
+                input_df = input_df[input_df[wrs2_row_col_out] < 100]
+                input_df = input_df[input_df[wrs2_row_col_out] > 9]
                 logging.debug('  Scene count: {}'.format(len(input_df)))
 
             # Filter by path and row
-            if path_list and wrs2_path_col in use_cols:
+            if path_list and wrs2_path_col_out in input_df.columns:
                 logging.debug('  Filtering by path')
-                input_df = input_df[input_df[wrs2_path_col] <= max(path_list)]
-                input_df = input_df[input_df[wrs2_path_col] >= min(path_list)]
-                input_df = input_df[input_df[wrs2_path_col].isin(path_list)]
-            if row_list and wrs2_row_col in use_cols:
+                input_df = input_df[input_df[wrs2_path_col_out] <= max(path_list)]
+                input_df = input_df[input_df[wrs2_path_col_out] >= min(path_list)]
+                input_df = input_df[input_df[wrs2_path_col_out].isin(path_list)]
+            if row_list and wrs2_row_col_out in input_df.columns:
                 logging.debug('  Filtering by row')
-                input_df = input_df[input_df[wrs2_row_col] <= max(row_list)]
-                input_df = input_df[input_df[wrs2_row_col] >= min(row_list)]
-                input_df = input_df[input_df[wrs2_row_col].isin(row_list)]
-            if wrs2_tile_list and wrs2_path_col in use_cols and\
-                    wrs2_row_col in use_cols:
+                input_df = input_df[input_df[wrs2_row_col_out] <= max(row_list)]
+                input_df = input_df[input_df[wrs2_row_col_out] >= min(row_list)]
+                input_df = input_df[input_df[wrs2_row_col_out].isin(row_list)]
+            if (wrs2_tile_list and
+                    wrs2_path_col_out in input_df.columns and
+                    wrs2_row_col_out in input_df.columns):
                 logging.debug('  Filtering by path/row')
                 try:
-                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col,
-                                                        wrs2_row_col]]\
-                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]),
-                               axis=1)
+                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col_out, wrs2_row_col_out]]\
+                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
                 except ValueError:
                     logging.info('  Possible empty DataFrame, skipping file')
                     continue
@@ -217,33 +171,30 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
                 # input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
             # Filter by year
-            if year_list and acq_date_col in use_cols:
-                input_df = input_df[input_df[acq_date_col].dt.year.isin(year_list)]
+            if year_list and acq_date_col_out in input_df.columns:
+                input_df = input_df[input_df[acq_date_col_out].dt.year.isin(year_list)]
 
             # Skip early/late months
-            if month_list and acq_date_col in use_cols:
+            if month_list and acq_date_col_out in input_df.columns:
                 logging.debug('  Filtering by month')
-                input_df = input_df[input_df[acq_date_col].dt.month.isin(month_list)]
+                input_df = input_df[input_df[acq_date_col_out].dt.month.isin(month_list)]
 
             # # Remove nighttime images
-            # # (this could be a larger value to remove high latitute images)
+            # # (this could be a larger value to remove high latitude images)
             # if elevation_col in use_cols:
             #     input_df = input_df[input_df[elevation_col] > 0]
             # logging.debug('  Scene count: {}'.format(len(input_df)))
 
-            input_df.sort_index(axis=1, inplace=True)
-
-            # Reorder and rename columns to match metadata_csv_api.py
-            # newer style name format
-            input_df = input_df[use_cols + [wrs2_tile_col]]
-            input_df.columns = out_cols
+            # Subset and order columns to match metadata_csv_api.py
+            input_df = input_df[[x[1] for x in use_cols] + [wrs2_tile_col]]
 
             # write dataframe to csv
             if i == 0:
                 input_df.to_csv(temp_path, mode='w', index=False, header=True)
             else:
                 input_df.to_csv(temp_path, mode='a', index=False, header=False)
-        # overwrite metadata csv with filter csv
+
+        # Overwrite metadata csv with filter csv
         if os.path.isfile(temp_path):
             shutil.move(temp_path, csv_path)
 
