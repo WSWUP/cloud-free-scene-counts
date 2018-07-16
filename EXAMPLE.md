@@ -8,7 +8,7 @@ The files provided in the example folder can be rebuilt using the following step
 
 #### Download Landsat Bulk Metadata CSV files
 
-The Landsat bulk metadata CSV files in the example folder were downloaded from the bulk metadata site on 2017-04-12 using the provided download script, and then filtered down to  Landsat images in 2000 and 2015 for path/row 43/30 (covering Central Oregon).
+The Landsat bulk metadata CSV files in the example folder were downloaded from the bulk metadata site on 2018-07-18 using the provided download script, and then filtered down to Landsat images in 2000 and 2015 for path/row 43/30 (covering Central Oregon).
 
 If you would like to recreate the example CSV files, the metadata_csv_download.py script could be run from within the example folder with the following command.
 
@@ -57,9 +57,9 @@ p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 
 ## Sort Cloudy Landsat Quicklooks
 
-Try moving the 2000_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the skip_list.txt.
+Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the skip_list.txt.
 
-The scene count file should look identical to the following:
+The updated scene count file should look identical to the following:
 ```
 PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
 p043r030,2000,2,3,4,3,3,2,3,4,4,3,2,3
@@ -68,7 +68,7 @@ p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 
 ## "Cloudy"
 
-Determing the allowable amount and extent of clouds and snow in an image will depend on the application and the study are.  For estimating evapotranspiration (ET) over large basins using land surface temeprature, even small amounts of cloud, snow, shadows, and smoke can have major impacts on the final estimates.  For extracting time series of vegetation indices more moderate amounts of cloud cover may be acceptable.
+Determining the allowable amount and extent of clouds and snow in an image will depend on the application and the study are.  For estimating evapotranspiration (ET) over large basins using land surface temperature, even small amounts of cloud, snow, shadows, and smoke can have major impacts on the final estimates.  For extracting time series of vegetation indices more moderate amounts of cloud cover may be acceptable.
 
 Some other considerations when deciding whether to exclude an image is how close in time are the previous and next images, are the images Landsat 7 with missing data (due to the broken scan line corrector), are the images very early or late in the year when a measurement may not be needed or accurate.
 
@@ -79,8 +79,47 @@ The following is one possible interpretation of the clear scene counts and IDs, 
 Clear Scene Counts:
 ```
 PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
-p043r030,2000,0,0,0,2,2,2,3,3,3,2,0,0
-p043r030,2015,0,2,1,2,2,2,2,2,2,1,0,0
+p043r030,2000,0,0,1,2,2,2,3,3,3,2,0,0
+p043r030,2015,1,2,1,2,2,2,2,2,2,1,0,0
+```
+
+Clear Scenes:
+```
+LT05_043030_20000320
+LT05_043030_20000421
+LE07_043030_20000429
+LE07_043030_20000515
+LE07_043030_20000531
+LE07_043030_20000616
+LT05_043030_20000624
+LE07_043030_20000702
+LE07_043030_20000718
+LT05_043030_20000726
+LT05_043030_20000811
+LE07_043030_20000819
+LT05_043030_20000827
+LE07_043030_20000904
+LT05_043030_20000912
+LE07_043030_20000920
+LE07_043030_20001006
+LE07_043030_20001022
+LC08_043030_20150125
+LO08_043030_20150210
+LE07_043030_20150218
+LE07_043030_20150306
+LC08_043030_20150415
+LE07_043030_20150423
+LC08_043030_20150501
+LE07_043030_20150509
+LE07_043030_20150610
+LE07_043030_20150626
+LC08_043030_20150720
+LE07_043030_20150728
+LE07_043030_20150813
+LC08_043030_20150821
+LC08_043030_20150906
+LC08_043030_20150922
+LE07_043030_20151016
 ```
 
 Cloudy Scenes:
@@ -138,43 +177,4 @@ LE07_043030_20151203
 LC08_043030_20151211
 LE07_043030_20151219
 LC08_043030_20151227
-```
-
-Clear Scenes:
-```
-LT05_043030_20000320
-LT05_043030_20000421
-LE07_043030_20000429
-LE07_043030_20000515
-LE07_043030_20000531
-LE07_043030_20000616
-LT05_043030_20000624
-LE07_043030_20000702
-LE07_043030_20000718
-LT05_043030_20000726
-LT05_043030_20000811
-LE07_043030_20000819
-LT05_043030_20000827
-LE07_043030_20000904
-LT05_043030_20000912
-LE07_043030_20000920
-LE07_043030_20001006
-LE07_043030_20001022
-LC08_043030_20150125
-LO08_043030_20150210
-LE07_043030_20150218
-LE07_043030_20150306
-LC08_043030_20150415
-LE07_043030_20150423
-LC08_043030_20150501
-LE07_043030_20150509
-LE07_043030_20150610
-LE07_043030_20150626
-LC08_043030_20150720
-LE07_043030_20150728
-LE07_043030_20150813
-LC08_043030_20150821
-LC08_043030_20150906
-LC08_043030_20150922
-LE07_043030_20151016
 ```
