@@ -12,7 +12,7 @@ API_URL = 'https://earthexplorer.usgs.gov/inventory/json/v/1.4.0/'
 
 def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
          months=None):
-    """Download filtered Landsat Collection 1 metadata CSV files
+    """Download filtered Landsat Collection 1 metadata CSV files via the API
 
     Parameters
     ----------

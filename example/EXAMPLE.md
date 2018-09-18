@@ -8,9 +8,9 @@ The files provided in the example folder can be rebuilt using the following step
 
 #### Download Landsat Bulk Metadata CSV files
 
-The Landsat bulk metadata CSV files in the example folder were downloaded from the bulk metadata site on 2018-07-18 using the provided download script, and then filtered down to Landsat images in 2000 and 2015 for path/row 43/30 (covering Central Oregon).
+The Landsat bulk metadata CSV files in the example folder were downloaded from the bulk metadata site on 2018-09-18 using the provided download script, and then filtered down to Landsat images in 2000 and 2015 for path/row 43/30 (covering Central Oregon).
 
-If you would like to recreate the example CSV files, the metadata_csv_download.py script could be run from within the example folder with the following command.
+If you would like to recreate the example CSV files, the metadata_csv_download.py script should be run from within the example folder with the following command.
 
 In a Windows command prompt, the command would be:
 ```
@@ -34,10 +34,10 @@ python ..\metadata_csv_filter.py -pr p043r030 --years 2000 2015
 
 #### Download Landsat Quicklooks
 
-The Landsat quicklooks provided in the example folder can be downloaded by running the "metadata_quicklook_download.py" script within the example folder.
+The Landsat quicklooks provided in the example folder can be downloaded by running the "quicklook_download.py" script within the example folder.
 
 ```
-python ..\metadata_quicklook_download.py
+python ..\quicklook_download.py
 ```
 
 ## Generate Scene Counts and Clear/Cloudy Scene Lists
@@ -57,7 +57,7 @@ p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 
 ## Sort Cloudy Landsat Quicklooks
 
-Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the cloudy_scenes.txt.
+Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_L1TP_043030_20001014_20160922_01_T1 has moved from clear_list.txt file to the cloudy_scenes.txt.
 
 The updated scene count file should look identical to the following:
 ```

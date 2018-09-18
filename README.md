@@ -5,7 +5,7 @@ The purpose of these tools is to identify the approximate number of cloud free L
 The general steps are:
 + Download the Landsat bulk metadata CSV files using the "metadata_csv_download.py" script
 + Filter the Landsat bulk metadata CSV files using the "metadata_csv_filter.py" script
-+ Download the Landsat quicklook images by path/row and year using the "metadata_csv_image_download.py" script.
++ Download the Landsat quicklook images by path/row and year using the "quicklook_download.py" script.
 + Manually sort/move the "cloudy" images into a separate "cloudy" folder for each year.
 + Generate scene counts and product ID lists using the "make_quicklook_lists.py" script.
 
@@ -19,7 +19,7 @@ For information on installing Python and Pandas or details on how to run the Pyt
 
 ## Download Landsat Bulk Metadata CSV files
 
-The starting point for generating monthly cloud free scene counts is to obtain the Landsat bulk metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The CSV files can be downloaded by running the provided python script "metadata_csv_download.py" or manually from the [Landsat Bulk Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
+The starting point for generating monthly cloud free scene counts is to obtain the full Landsat metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The CSV files can be downloaded by running the provided python script "metadata_csv_download.py" or manually from the [Landsat Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
 
 ```
 python metadata_csv_download.py
@@ -39,7 +39,7 @@ The Landsat quicklook images can be downloaded using the provided script "metada
 
 From the command prompt, change directory into the quicklooks folder, then enter the following command, where FOLDER is the path to the folder containing the bulk metadata CSV files.  If "--csv" is not set, the script will attempt to use the current working directory.
 ```
-python metadata_quicklook_download.py --csv FOLDER
+python quicklook_download.py --csv FOLDER
 ```
 
 If you double click the download script, it should prompt open a GUI prompting you to select the folder containing the CSV files.
@@ -72,6 +72,6 @@ The scripts originally (v0.1.X) used a "shortened" collection 1 product identifi
 To enable backwards compatibility, the shortened IDs can be used in later versions of the scripts (v0.2+) by setting the "-id" or "--id_type" argument to "short".
 
 ```
-python metadata_quicklook_download.py --id_type short
+python quicklook_download.py --id_type short
 python make_quicklook_lists.py --id_type short
 ```
