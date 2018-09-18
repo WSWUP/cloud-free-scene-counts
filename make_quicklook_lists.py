@@ -93,7 +93,6 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
             input_skip_list = skip_f.readlines()
             input_skip_list = [item.strip()[:16] for item in input_skip_list]
 
-
     # Read in metadata CSV files
     logging.info('\nReading metadata CSV files')
     # product_ids = set()

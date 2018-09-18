@@ -1,14 +1,14 @@
 import argparse
-import datetime as dt
 import logging
 import os
 import re
 import shutil
 import sys
-# Python 2/3 support
 try:
+    # Python 3
     import urllib.request as urlrequest
 except ImportError:
+    # Python 2
     import urllib as urlrequest
 
 import pandas as pd
@@ -98,34 +98,12 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         data_type_col, product_id_col, scene_id_col, wrs2_path_col,
         wrs2_row_col, wrs2_tile_col]
 
-    # # Input fields
-    # acq_date_col = 'acquisitionDate'
-    # browse_col = 'browseAvailable'
-    # browse_url_col = 'browseURL'
-    # cloud_col = 'CLOUD_COVER_LAND'
-    # col_number_col = 'COLLECTION_NUMBER'
-    # col_category_col = 'COLLECTION_CATEGORY'
-    # data_type_col = 'DATA_TYPE_L1'
-    # product_id_col = 'LANDSAT_PRODUCT_ID'
-    # scene_id_col = 'LANDSAT_SCENE_ID'
-    # sensor_col = 'sensor'
-    # wrs2_path_col = 'path'
-    # wrs2_row_col = 'row'
-    # # available_col = 'L1_AVAILABLE'
-    # # time_col = 'sceneStartTime'
-    # # azimuth_col = 'sunAzimuth'
-    # # elevation_col = 'sunElevation'
-
-    # # Only load the following columns from the CSV
-    # input_cols = [
-    #     browse_col, url_col, product_col, date_col, cloud_col,
-    #     path_col, row_col, data_type_col, sensor_col,
-    #     number_col, category_col]
-
     # All other data types and categories will be written to cloudy folder
+    # DEADBEEF Should OLI_L1TP (no TIRS) be included in clear images?
+    data_types = ['OLI_TIRS_L1TP', 'OLI_L1TP', 'ETM_L1TP', 'TM_L1TP', 'L1TP']
+    # data_types = ['OLI_TIRS_L1TP', 'ETM_L1TP', 'TM_L1TP', 'L1TP']
+
     # "A1" isn't documented but appear to be good Landsat 7 L1TP images
-    data_types = ['OLI_TIRS_L1TP', 'ETM_L1TP', 'TM_L1TP', 'L1TP']
-    # data_types = ['L1TP']
     categories = ['T1', 'RT', 'A1']
 
     # Setup and validate the path/row lists
@@ -237,27 +215,13 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
             # Quicklook image path
             image_folder = os.path.join(
                 output_folder, row_df[wrs2_tile_col], str(image_dt.year))
-            image_name = '{0}_{1}.jpg'.format(
+            image_name = '{}_{}.jpg'.format(
                 image_dt.strftime('%Y%m%d_%j'), product_id[:4].upper())
             image_path = os.path.join(image_folder, image_name)
 
             # "Cloudy" quicklooks are moved to a separate folder
             cloud_path = os.path.join(
                 image_folder, cloud_folder_name, image_name)
-
-            # # DEADBEEF - Rename/move quicklooks with old naming style
-            # old_image_name = '{0}_{1}.jpg'.format(
-            #     image_dt.strftime('%Y_%j'),
-            #     product_id[:4].upper().replace('0', ''))
-            # old_image_path = os.path.join(image_folder, old_image_name)
-            # old_cloud_path = os.path.join(
-            #     image_folder, cloud_folder_name, old_image_name)
-            # if os.path.isfile(old_image_path) and not os.path.isfile(image_path):
-            #     logging.info('{} -> {}'.format(old_image_path, image_path))
-            #     shutil.move(old_image_path, image_path)
-            # if os.path.isfile(old_cloud_path) and not os.path.isfile(cloud_path):
-            #     logging.info('{} -> {}'.format(old_image_path, image_path))
-            #     shutil.move(old_cloud_path, cloud_path)
 
             # Remove exist
             if overwrite_flag:
@@ -274,17 +238,13 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
                 logging.debug('  {} - cloudy, skipping'.format(product_id))
                 continue
 
-            # # Try downloading fully cloudy scenes to cloud folder
+            # # Download fully cloudy scenes to cloud folder
             # if int(row_dict[cloud_cover_col]) >= 90:
             #    image_path = cloud_path[:]
             #    logging.info('  {} - cloud_cover >= 90, downloading to cloudy'.format(
             #         product_id))
 
-            # Try downloading non-L1T quicklooks to the cloud folder
-            # if (row_df[data_type_col].upper() not in data_types or
-            #         row_df[category_col].upper() != 'T1' or
-            #         row_df[cloud_col] >= 90 or
-            #         row_df[sensor_col].upper() != 'OLI'):
+            # Download non-L1T quicklooks to the cloud folder
             if (row_df[data_type_col].upper() not in data_types or
                     row_df[col_category_col].upper() not in categories):
                 if os.path.isfile(image_path):
@@ -293,8 +253,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
                 logging.info('  {} - not T1/L1TP, downloading to cloudy'.format(
                     product_id))
 
-            # Try downloading scenes in skip list to cloudy folder
-            if skip_list and product_id[:20] in skip_list:
+            # Download scenes in skip list to cloudy folder
+            if skip_list and product_id in skip_list:
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
@@ -313,8 +273,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
     # Download Landsat Look Images
     logging.debug('')
     for image_path, image_url in sorted(download_list):
-        logging.info('{0}'.format(image_path))
-        logging.debug('  {0}'.format(image_url))
+        logging.info('{}'.format(image_path))
+        logging.debug('  {}'.format(image_url))
         image_folder = os.path.dirname(image_path)
         if not os.path.isdir(image_folder):
             os.makedirs(image_folder)
@@ -441,7 +401,7 @@ def parse_int_set(nputstr=""):
                 token = [int(k.strip()) for k in i.split('-')]
                 if len(token) > 1:
                     token.sort()
-                    # we have items seperated by a dash
+                    # we have items separated by a dash
                     # try to build a valid range
                     first = token[0]
                     last = token[len(token) - 1]

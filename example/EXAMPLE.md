@@ -57,7 +57,7 @@ p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 
 ## Sort Cloudy Landsat Quicklooks
 
-Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the skip_list.txt.
+Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder into the "p043r030\2000\cloudy" folder and rerun the make_quicklook_lists.py script.  Notice that the count for Oct., 2000 has gone from 4 to 3, and the product ID LT05_043030_20001014 has moved from clear_list.txt file to the cloudy_scenes.txt.
 
 The updated scene count file should look identical to the following:
 ```

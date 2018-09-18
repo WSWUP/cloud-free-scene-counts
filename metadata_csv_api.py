@@ -4,7 +4,6 @@ import logging
 import os
 import pprint
 import requests
-# import shutil
 
 import pandas as pd
 
@@ -258,7 +257,7 @@ def parse_int_set(nputstr=""):
                 token = [int(k.strip()) for k in i.split('-')]
                 if len(token) > 1:
                     token.sort()
-                    # we have items seperated by a dash
+                    # we have items separated by a dash
                     # try to build a valid range
                     first = token[0]
                     last = token[len(token) - 1]

@@ -85,11 +85,6 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
     data_type_col = 'DATA_TYPE_L1'
     wrs2_path_col = 'path'
     wrs2_row_col = 'row'
-    # browse_col = 'browseAvailable'
-    # available_col = 'L1_AVAILABLE'
-    # utm_zone = 'UTM_ZONE'  # Not in L8 file
-    # azimuth_col = 'sunAzimuth'
-    # elevation_col = 'sunElevation'
 
     # Output fieldnames (matches metadata_csv_api.py and newer style formatting)
     acq_date_col_out = 'ACQUISITION_DATE'
@@ -142,7 +137,8 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
             # Rename fields before filtering
             for input_col, output_col in use_cols:
                 if input_col in input_df.columns:
-                    input_df.rename(columns={input_col: output_col}, inplace=True)
+                    input_df.rename(columns={input_col: output_col},
+                                    inplace=True)
 
             # Manually convert date string to datetime
             # Can't use parse_dates in read_csv() since we are not sure which
@@ -160,7 +156,7 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
                 input_df = input_df[input_df[wrs2_row_col_out] > 9]
                 logging.debug('  Scene count: {}'.format(len(input_df)))
 
-            # Filter by path and row
+            # Filter by path and row separately
             if path_list and wrs2_path_col_out in input_df.columns:
                 logging.debug('  Filtering by path')
                 input_df = input_df[input_df[wrs2_path_col_out] <= max(path_list)]
@@ -171,13 +167,20 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
                 input_df = input_df[input_df[wrs2_row_col_out] <= max(row_list)]
                 input_df = input_df[input_df[wrs2_row_col_out] >= min(row_list)]
                 input_df = input_df[input_df[wrs2_row_col_out].isin(row_list)]
+
+            # Filter by WRS2 tile list (apply call raises exception on empty df)
+            if input_df.empty:
+                logging.debug('  Empty dataframe, skipping chunk')
+                continue
             if (wrs2_tile_list and
                     wrs2_path_col_out in input_df.columns and
                     wrs2_row_col_out in input_df.columns):
                 logging.debug('  Filtering by path/row')
                 try:
-                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col_out, wrs2_row_col_out]]\
-                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]), axis=1)
+                    input_df[wrs2_tile_col] = input_df[[wrs2_path_col_out,
+                                                        wrs2_row_col_out]]\
+                        .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]),
+                               axis=1)
                 except ValueError:
                     logging.info('  Possible empty DataFrame, skipping file')
                     continue
@@ -186,23 +189,23 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
 
             # Filter by year
             if year_list and acq_date_col_out in input_df.columns:
-                input_df = input_df[input_df[acq_date_col_out].dt.year.isin(year_list)]
+                input_df = input_df[
+                    input_df[acq_date_col_out].dt.year.isin(year_list)]
 
             # Skip early/late months
             if month_list and acq_date_col_out in input_df.columns:
                 logging.debug('  Filtering by month')
-                input_df = input_df[input_df[acq_date_col_out].dt.month.isin(month_list)]
-
-            # # Remove nighttime images
-            # # (this could be a larger value to remove high latitude images)
-            # if elevation_col in use_cols:
-            #     input_df = input_df[input_df[elevation_col] > 0]
-            # logging.debug('  Scene count: {}'.format(len(input_df)))
+                input_df = input_df[
+                    input_df[acq_date_col_out].dt.month.isin(month_list)]
 
             # Subset and order columns to match metadata_csv_api.py
             input_df = input_df[[x[1] for x in use_cols] + [wrs2_tile_col]]
+            if input_df.empty:
+                logging.debug('  Empty dataframe, skipping chunk')
+                continue
 
-            # write dataframe to csv
+            # Write dataframe to csv
+            logging.debug('  Saving')
             if i == 0:
                 input_df.to_csv(temp_path, mode='w', index=False, header=True)
             else:
@@ -296,7 +299,7 @@ def parse_int_set(nputstr=""):
                 token = [int(k.strip()) for k in i.split('-')]
                 if len(token) > 1:
                     token.sort()
-                    # we have items seperated by a dash
+                    # we have items separated by a dash
                     # try to build a valid range
                     first = token[0]
                     last = token[len(token) - 1]
