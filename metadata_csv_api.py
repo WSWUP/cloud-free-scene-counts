@@ -288,11 +288,11 @@ def arg_parse():
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
         '-y', '--years', required=True, nargs='+',
-        help='Space/comma separated list of years or year ranges to keep'
+        help='Space/comma separated list of years or year ranges to keep '
              '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
         '-m', '--months', default=None, nargs='+',
-        help='Space/comma separated list of months or month ranges to keep'
+        help='Space/comma separated list of months or month ranges to keep '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,

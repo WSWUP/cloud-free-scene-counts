@@ -64,7 +64,6 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         'LANDSAT_TM_C1.csv',
     ]
 
-    # Input fields
     product_id_col = 'LANDSAT_PRODUCT_ID'
 
     quicklook_re = re.compile(

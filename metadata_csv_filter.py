@@ -2,7 +2,7 @@ import argparse
 import logging
 import os
 import re
-import shutil
+# import shutil
 import sys
 
 import pandas as pd
@@ -214,7 +214,14 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
 
         # Overwrite metadata csv with filter csv
         if os.path.isfile(temp_path):
-            shutil.move(temp_path, csv_path)
+            input_df = pd.read_csv(temp_path)
+            input_df.sort_values(by=[wrs2_tile_col, acq_date_col_out],
+                                 inplace=True)
+            input_df.to_csv(csv_path, index=False)
+            del input_df
+            os.remove(temp_path)
+
+            # shutil.move(temp_path, csv_path)
 
 
 def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
@@ -329,11 +336,11 @@ def arg_parse():
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
         '-y', '--years', default=None, nargs='+',
-        help='Space/comma separated list of years or year ranges to keep'
+        help='Space/comma separated list of years or year ranges to keep '
              '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
         '-m', '--months', default=None, nargs='+',
-        help='Space/comma separated list of months or month ranges to keep'
+        help='Space/comma separated list of months or month ranges to keep '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
         '--conus', default=False, action='store_true',

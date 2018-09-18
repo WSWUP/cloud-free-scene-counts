@@ -210,11 +210,6 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
             # logging.debug('  {}'.format(product_id))
             image_dt = row_df[acq_date_col].to_pydatetime()
 
-            # sensor = row_dict[sensor_col].upper()
-            # path = int(row_df[path_col])
-            # row = int(row_df[row_col])
-            # wrs2_tile = row_df[wrs2_tile_col]
-
             # Quicklook image path
             image_folder = os.path.join(
                 output_folder, row_df[wrs2_tile_col], str(image_dt.year))
@@ -439,11 +434,11 @@ def arg_parse():
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
         '-y', '--years', default=None, nargs='+',
-        help='Space/comma separated list of years or year_ranges to download'
+        help='Space/comma separated list of years or year_ranges to download '
              '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
         '-m', '--months', default=None, nargs='+',
-        help='Space/comma separated list of months or month ranges to download'
+        help='Space/comma separated list of months or month ranges to download '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
         '--skiplist', default=None, metavar='FILE',
