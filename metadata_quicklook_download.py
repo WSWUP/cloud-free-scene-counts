@@ -9,7 +9,7 @@ import requests
 
 
 def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
-         skip_list_path=None, overwrite_flag=False):
+         skip_list_path=None, overwrite_flag=False, id_type='product'):
     """Download Landsat Collection 1 quicklook images
 
     Parameters
@@ -34,6 +34,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         File path of an existing Landsat skip list (the default is None).
     overwrite_flag : bool, optional
         If True, overwrite existing files (the default is False).
+    id_type : str, optional
+        Landsat ID type (the default is 'product').
 
     Returns
     -------
@@ -65,7 +67,7 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
 
     path_list = []
     row_list = []
-    
+
     csv_file_list = [
         'LANDSAT_8_C1.csv',
         'LANDSAT_ETM_C1.csv',
@@ -100,6 +102,9 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
     # "A1" isn't documented but appear to be good Landsat 7 L1TP images
     categories = ['T1', 'RT', 'A1']
 
+    if id_type.lower() == 'short':
+        logging.info('\nUsing shortened Landsat ID')
+
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
         wrs2_tile_list, path_list, row_list)
@@ -118,7 +123,7 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
     if skip_list_path:
         with open(skip_list_path, 'r') as skip_f:
             skip_list = skip_f.readlines()
-            skip_list = [item.strip()[:16] for item in skip_list]
+            skip_list = [item.strip() for item in skip_list]
 
     logging.info('\nReading metadata CSV files')
     download_list = []
@@ -157,7 +162,7 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         # Then filter by path/row combined
         # DEADBEEF - WRS2_TILE should already be in the file
         try:
-            input_df[wrs2_tile_col] = input_df[[wrs2_path_col, wrs2_row_col]]\
+            input_df[wrs2_tile_col] = input_df[[wrs2_path_col, wrs2_row_col]] \
                 .apply(lambda x: wrs2_tile_fmt.format(x[0], x[1]), axis=1)
         except ValueError:
             logging.info('  Possible empty DataFrame, skipping file')
@@ -174,7 +179,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         # Skip early/late months
         if month_list:
             logging.debug('  Filtering by month')
-            input_df = input_df[input_df[acq_date_col].dt.month.isin(month_list)]
+            input_df = input_df[
+                input_df[acq_date_col].dt.month.isin(month_list)]
         # if start_month:
         #     logging.debug('  Filtering by start month')
         #     input_df = input_df[input_df[date_col].dt.month >= start_month]
@@ -195,10 +201,13 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         # Each item is a "row" of data
         for row_index, row_df in input_df.iterrows():
             # logging.debug(row_df)
-            product_id = row_df[product_id_col].split('_')
-            product_id = '_'.join([
-                product_id[0], product_id[2], product_id[3]])
-            logging.debug('  {}'.format(product_id))
+            if id_type.lower() == 'short':
+                product_id = row_df[product_id_col].split('_')
+                product_id = '_'.join([
+                    product_id[0], product_id[2], product_id[3]])
+            else:
+                product_id = str(row_df[product_id_col])
+            # logging.debug('  {}'.format(product_id))
             image_dt = row_df[acq_date_col].to_pydatetime()
 
             # sensor = row_dict[sensor_col].upper()
@@ -229,7 +238,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
             elif os.path.isfile(cloud_path):
                 if os.path.isfile(image_path):
                     os.remove(image_path)
-                logging.debug('  {} - cloudy, skipping'.format(product_id))
+                logging.debug(
+                    '  {} - in cloudy folder, skipping'.format(product_id))
                 continue
 
             # # Download fully cloudy scenes to cloud folder
@@ -252,12 +262,13 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
                 if os.path.isfile(image_path):
                     os.remove(image_path)
                 image_path = cloud_path[:]
-                logging.info('  {} - skip list, downloading to cloudy'.format(
+                logging.info('  {} - in skip list, downloading to cloudy'.format(
                     product_id))
 
             # Check if file exists last
             if os.path.isfile(image_path):
-                logging.debug('  {} - image exists, skipping'.format(product_id))
+                logging.debug(
+                    '  {} - image exists, skipping'.format(product_id))
                 continue
 
             # Save download URL and save path
@@ -440,6 +451,9 @@ def arg_parse():
         help='File path of scene IDs that should be downloaded directly to '
              'the "cloudy" scenes folder')
     parser.add_argument(
+        '-id', '--id_type', default='product', choices=['product', 'short'],
+        help='Landsat ID type')
+    parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Overwite existing quicklooks')
     parser.add_argument(
@@ -465,4 +479,5 @@ if __name__ == '__main__':
 
     main(csv_folder=args.csv, output_folder=args.output,
          wrs2_tiles=args.wrs2, years=args.years, months=args.months,
-         skip_list_path=args.skiplist, overwrite_flag=args.overwrite)
+         skip_list_path=args.skiplist, id_type=args.id_type,
+         overwrite_flag=args.overwrite)

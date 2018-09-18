@@ -1,7 +1,6 @@
 import argparse
 import logging
 import os
-import pprint
 import re
 import shutil
 import sys
@@ -131,7 +130,8 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         # Process the CSVs in chunks to limit the memory usage
         logging.info('  Filtering by chunk')
         temp_path = csv_path.replace('.csv', '_filter.csv')
-        for i, input_df in enumerate(pd.read_csv(csv_path, chunksize=1 << 16)):
+        append_flag = False
+        for input_df in pd.read_csv(csv_path, chunksize=1 << 16):
             logging.debug('\n  Scene count: {}'.format(len(input_df)))
 
             # Rename fields before filtering
@@ -206,10 +206,11 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
 
             # Write dataframe to csv
             logging.debug('  Saving')
-            if i == 0:
-                input_df.to_csv(temp_path, mode='w', index=False, header=True)
-            else:
+            if append_flag:
                 input_df.to_csv(temp_path, mode='a', index=False, header=False)
+            else:
+                input_df.to_csv(temp_path, mode='w', index=False, header=True)
+                append_flag = True
 
         # Overwrite metadata csv with filter csv
         if os.path.isfile(temp_path):

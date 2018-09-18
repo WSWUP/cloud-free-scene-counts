@@ -12,7 +12,7 @@ import pandas as pd
 
 
 def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
-         skip_list_path=None, summary_flag=True):
+         skip_list_path=None, summary_flag=True, id_type='product'):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Parameters
@@ -31,6 +31,8 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         File path of an existing Landsat skip list (the default is None).
     summary_flag : bool, optional
         Generate clear scene counts summary file (the default is True).
+    id_type : str, optional
+        Landsat ID type (the default is 'product').
 
     """
     logging.info('\nMake skip & keep lists from quicklook images')
@@ -63,16 +65,16 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     ]
 
     # Input fields
-    # acq_date_col = 'ACQUISITION_DATE'
-    # browse_url_col = 'BROWSE_REFLECTIVE_PATH'
     product_id_col = 'LANDSAT_PRODUCT_ID'
-    # scene_id_col = 'LANDSAT_SCENE_ID'
 
     quicklook_re = re.compile(
         '(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})_'
         '(?P<doy>\d{3})_(?P<landsat>\w{4}).jpg')
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
     # wrs2_tile_re = re.compile('p(?P<PATH>\d{1,3})r(?P<ROW>\d{1,3})')
+
+    if id_type.lower() == 'short':
+        logging.info('\nUsing shortened Landsat ID')
 
     # Setup and validate the path/row lists
     wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
@@ -116,19 +118,15 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
                 dt.datetime.strptime(x[0][17:25], '%Y%m%d').strftime('%Y%m%d_%j'),
                 x[0][:4]),
             axis=1)
-        # input_df['QUICKLOOK'] = input_df[[scene_id_col]].apply(
-        #     lambda x: '{}_{}0{}.jpg'.format(
-        #         dt.datetime.strptime(x[0][9:16], '%Y%j').strftime('%Y%m%d_%j'),
-        #         x[0][:2].upper(), x[0][2]),
-        #     axis=1)
         input_df.set_index('QUICKLOOK', drop=True, inplace=True)
 
-        # DEADBEEF - Eventually switch to product_id directly
-        input_df['temp_id'] = input_df[[product_id_col]].apply(
-            lambda x: '{}_{}_{}'.format(x[0][0:4], x[0][10:16], x[0][17:25]),
-            axis=1)
-        quicklook_ids.update(input_df['temp_id'].to_dict())
-        # quicklook_ids.update(input_df[product_id_col].to_dict())
+        if id_type.lower() == 'short':
+            input_df['temp_id'] = input_df[[product_id_col]].apply(
+                lambda x: '{}_{}_{}'.format(x[0][0:4], x[0][10:16], x[0][17:25]),
+                axis=1)
+            quicklook_ids.update(input_df['temp_id'].to_dict())
+        else:
+            quicklook_ids.update(input_df[product_id_col].to_dict())
 
     logging.debug('\nQuicklook PRODUCT_ID lookup:')
     logging.debug(pprint.pformat(quicklook_ids))
@@ -181,11 +179,6 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
             # Look up PRODUCT_ID/SCENE_ID using metadata CSV data
             product_id = quicklook_ids[name]
 
-            # # DEADBEEF - Build PRODUCT_ID/SCENE_ID from quicklook name
-            # image_dt = dt.datetime(int(y), int(m), int(d))
-            # product_id = '{}_{:03d}{:03d}_{}'.format(
-            #     landsat, path, row, image_dt.strftime('%Y%m%d'))
-
             if input_skip_list and product_id in input_skip_list:
                 logging.debug('  {} - skip list, skipping'.format(
                     product_id))
@@ -209,13 +202,13 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
 
     if summary_flag and output_keep_list:
         # This would probably be easier to do with pandas
-        # def nested_dict():
-        #     return defaultdict(nested_dict)
-        # counts = nested_dict()
         counts = defaultdict(dict)
 
         for year, doy, product_id in sorted(output_keep_list):
-            wrs2_tile = 'p{}r{}'.format(product_id[5:8], product_id[8:11])
+            if id_type.lower() == 'short':
+                wrs2_tile = 'p{}r{}'.format(product_id[5:8], product_id[8:11])
+            else:
+                wrs2_tile = 'p{}r{}'.format(product_id[10:13], product_id[13:16])
             output_dt = dt.datetime.strptime(
                 '{}_{:03d}'.format(year, int(doy)), '%Y_%j')
             try:
@@ -329,6 +322,9 @@ def arg_parse():
         help='File path of scene IDs that should be written directly to the '
              'cloudy_scenes.txt file')
     parser.add_argument(
+        '-id', '--id_type', default='product', choices=['product', 'short'],
+        help='Landsat ID type')
+    parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
@@ -351,4 +347,4 @@ if __name__ == '__main__':
 
     main(csv_folder=args.csv, quicklook_folder=args.quicklook,
          output_folder=args.output, wrs2_tiles=args.wrs2,
-         skip_list_path=args.skiplist)
+         skip_list_path=args.skiplist, id_type=args.id_type)

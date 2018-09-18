@@ -63,3 +63,15 @@ python make_quicklook_lists.py
 
 For a detailed walk through of running the scripts and generating the scene list files, please see the provided [example](./example/EXAMPLE.md).
 
+## Landsat Product Identifier
+
+The scripts currently use the [Landsat Product Identifier](https://landsat.usgs.gov/landsat-collections#Prod%20IDs) as the unique identifier for each Landsat image.
+
+The scripts originally (v0.1.X) used a "shortened" collection 1 product identifier to match the Earth Engine system index for the collection 1 images.  This ID is based on the Landsat product ID, but does not include the processing correction level, processing date, collection number, or collection category.  For example the Landsat product identifier LT05_L1TP_043030_20001014_20160922_01_T1 would have been saved in the output file as LT05_043030_20001014.  One assumption with this approach was that an image would be "cloudy" even if the processing date or correction level changes.
+
+To enable backwards compatibility, the shortened IDs can be used in later versions of the scripts (v0.2+) by setting the "-id" or "--id_type" argument to "short".
+
+```
+python metadata_quicklook_download.py --id_type short
+python make_quicklook_lists.py --id_type short
+```
