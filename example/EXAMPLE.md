@@ -50,7 +50,7 @@ python ..\make_quicklook_lists.py
 
 The file "clear_scene_counts.txt" should look identical to the following:
 ```
-PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
+WRS2_TILE,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
 p043r030,2000,2,3,4,3,3,2,3,4,4,4,2,3
 p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 ```
@@ -61,7 +61,7 @@ Try moving the 20001014_288_LT05 quicklook image from the "p043r030\2000" folder
 
 The updated scene count file should look identical to the following:
 ```
-PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
+WRS2_TILE,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
 p043r030,2000,2,3,4,3,3,2,3,4,4,3,2,3
 p043r030,2015,2,3,3,3,4,4,4,4,2,3,2,3
 ```
@@ -78,7 +78,7 @@ The following is one possible interpretation of the clear scene counts and IDs, 
 
 Clear Scene Counts:
 ```
-PATH_ROW,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
+WRS2_TILE,YEAR,JAN,FEB,MAR,APR,MAY,JUN,JUL,AUG,SEP,OCT,NOV,DEC
 p043r030,2000,0,0,1,2,2,2,3,3,3,2,0,0
 p043r030,2015,1,2,1,2,2,2,2,2,2,1,0,0
 ```

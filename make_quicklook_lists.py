@@ -227,7 +227,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
 
         with open(summary_path, 'w') as output_f:
             output_f.write('{},{},{}\n'.format(
-                'PATH_ROW', 'YEAR', ','.join([
+                'WRS2_TILE', 'YEAR', ','.join([
                     calendar.month_abbr[m].upper() for m in range(1, 13)])))
             for wrs2_tile, year_counts in sorted(counts.items()):
                 for year, month_counts in sorted(year_counts.items()):
