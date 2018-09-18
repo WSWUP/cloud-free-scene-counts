@@ -14,6 +14,7 @@
 LANDSAT_8_C1.csv
 LANDSAT_ETM_C1.csv
 LANDSAT_TM_C1.csv
+*_filter.csv
 
-# Quicklooks JPEGs
+# Quicklook JPEGs
 *.jpg

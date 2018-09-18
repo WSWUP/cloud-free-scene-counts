@@ -27,7 +27,8 @@ def main(csv_folder, overwrite_flag=False):
     https://landsat.usgs.gov/download-entire-collection-metadata
 
     Example CSV download URL:
-    https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files/LANDSAT_TM-1980-1989.csv
+    https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files/
+    LANDSAT_TM-1980-1989.csv
 
     """
     logging.info('\nDownloading Landsat Bulk Metadata CSV GZ files')
@@ -120,7 +121,7 @@ def decompress_gz(input_path, output_path, blocksize=1 << 14):
 
 
 def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
+    if not os.path.isdir(os.path.abspath(arg)):
         parser.error('The folder {} does not exist!'.format(arg))
     else:
         return arg
@@ -132,8 +133,9 @@ def arg_parse():
         description='Download Landsat Collection 1 bulk metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
-        default=os.getcwd(), help='Landsat bulk metadata CSV folder')
+        '--csv', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
+        help='Landsat bulk metadata CSV folder')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -142,6 +144,7 @@ def arg_parse():
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
+    # Convert relative paths to absolute paths
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
 

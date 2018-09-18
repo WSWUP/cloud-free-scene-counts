@@ -29,7 +29,7 @@ The "..\" or "../" notation in the script call indicates that Python should look
 The Landsat bulk metadata CSV files can be filtered to match those provided in the example folder by running the "metadata_csv_filter.py" script with the command line arguments seen below.
 
 ```
-python ..\metadata_csv_filter.py -pr p043r030 -y 2000,2015
+python ..\metadata_csv_filter.py -pr p043r030 --years 2000 2015
 ```
 
 #### Download Landsat Quicklooks
@@ -72,7 +72,7 @@ Determining the allowable amount and extent of clouds and snow in an image will 
 
 Some other considerations when deciding whether to exclude an image is how close in time are the previous and next images, are the images Landsat 7 with missing data (due to the broken scan line corrector), are the images very early or late in the year when a measurement may not be needed or accurate.
 
-##
+## Final Scene ID lists
 
 The following is one possible interpretation of the clear scene counts and IDs, assuming that the goal is to compute ET using a remotely sensed surface energy balance and even minimal levels of cloud and snow cover are unwanted.  Some of the "non-cloudy" images are still questionable and might be removed in subsequent analysis/filtering (e.g. 2000-08-19, 2000-09-04, 2015-01-25, 2015-04-23)
 

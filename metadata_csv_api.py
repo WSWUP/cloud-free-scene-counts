@@ -11,8 +11,8 @@ import pandas as pd
 API_URL = 'https://earthexplorer.usgs.gov/inventory/json/v/1.4.0/'
 
 
-def main(username, password, wrs2_tile_list, years, csv_folder=os.getcwd(),
-         months=''):
+def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
+         months=None):
     """Download filtered Landsat Collection 1 metadata CSV files
 
     Parameters
@@ -21,18 +21,19 @@ def main(username, password, wrs2_tile_list, years, csv_folder=os.getcwd(),
         USGS Earth Explorer username.
     password : str
         USGS Earth Explorer password.
-    wrs2_tile_list : list
-        Landsat path/rows to process. Example: ['p043r032', 'p043r033']
-    years : str
-        Comma separated values or ranges of years to download.
-        Example: '1984,2000-2015'
+    wrs2_tiles : list
+        Landsat WRS2 tiles (path/rows) to include.
+        Example: ['p043r032', 'p043r033']
+    years : list
+        Comma separated values or ranges of years to include.
+        Example: ['1984', '2000-2015']
     csv_folder : str, optional
         Folder path where the metadata CSV files will be saved
          (the default is the current working directory).
-    months : str, optional
-        Comma separated values or ranges of months to keep.
-        Example: '1, 2, 3-5'.
-        Default is '' which will keep images for all months.
+    months : list, optional
+        Comma separated values or ranges of months to include.
+        The default is None which will keep entries for all months.
+        Example: ['1', '2', '3-5']
 
     Notes
     -----
@@ -77,9 +78,15 @@ def main(username, password, wrs2_tile_list, years, csv_folder=os.getcwd(),
         'LANDSAT_TM_C1': range(1984, 2011 + 1),
     }
 
-    # Convert/parse the input year and month strings to lists
-    year_list = sorted(list(parse_int_set(years)))
-    month_list = sorted(list(parse_int_set(months)))
+    wrs2_tile_list = sorted([
+        x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
+
+    year_list = sorted([x for y in years for x in parse_int_set(y)])
+
+    if months is not None:
+        month_list = sorted([x for m in months for x in parse_int_set(m)])
+    else:
+        month_list = []
 
     # Login to get API key
     api_key = api_login(username, password)
@@ -226,7 +233,7 @@ def get_field_ids(landsat, api_key):
 
 
 def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
+    if not os.path.isdir(os.path.abspath(arg)):
         parser.error('The folder {} does not exist!'.format(arg))
     else:
         return arg
@@ -239,7 +246,7 @@ def parse_int_set(nputstr=""):
     """
     selection = set()
     invalid = set()
-    # tokens are comma seperated values
+    # tokens are comma separated values
     tokens = [x.strip() for x in nputstr.split(',')]
     for i in tokens:
         try:
@@ -273,25 +280,27 @@ def arg_parse():
     parser.add_argument('username', help='USGS Earth Explorer Username')
     parser.add_argument('password', help='USGS Earth Explorer Password')
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x),
-        default=os.getcwd(), help='Landsat metadata CSV folder')
+        '--csv', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
+        help='Landsat metadata CSV folder')
     parser.add_argument(
-        '-pr', '--pathrows', nargs='+', required=True, metavar='pXXXrYYY',
-        help='Space separated string of Landsat path/rows to keep '
+        '-pr', '--wrs2', required=True, nargs='+', metavar='pXXXrYYY',
+        help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
-        '-y', '--years', required=True, type=str,
-        help='Comma separated list or range of years to download'
-             '(i.e. "--years 1984,2000-2015")')
+        '-y', '--years', required=True, nargs='+',
+        help='Space/comma separated list of years or year ranges to keep'
+             '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
-        '-m', '--months', default='1-12', type=str,
-        help='Comma separated list or range of months to download'
-             '(i.e. "--months 1,2,3-5")')
+        '-m', '--months', default=None, nargs='+',
+        help='Space/comma separated list of months or month ranges to keep'
+             '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
+    # Convert relative paths to absolute paths
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
 
@@ -304,4 +313,4 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
     main(username=args.username, password=args.password, csv_folder=args.csv,
-         wrs2_tile_list=args.pathrows, years=args.years, months=args.months)
+         wrs2_tiles=args.wrs2, years=args.years, months=args.months)

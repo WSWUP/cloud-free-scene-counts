@@ -9,25 +9,26 @@ import sys
 import pandas as pd
 
 
-def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
+def main(csv_folder, wrs2_tiles=None, years=None, months=None,
+         conus_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
     Parameters
     ----------
     csv_folder : str
         Folder path of the Landsat bulk metadata CSV files.
-    wrs2_tile_list : list, optional
-        Landsat path/rows to process
+    wrs2_tiles : list, optional
+        Landsat WRS2 tiles (path/rows) to include.
+        The default is None which will keep entries for all tiles.
         Example: ['p043r032', 'p043r033']
-        Default is []
-    years : str, optional
-        Comma separated values or ranges of years to download.
-        Example: '1984,2000-2015'
-        Default is '' which will download images for all years.
-    months : str, optional
-        Comma separated values or ranges of months to keep.
-        Example: '1, 2, 3-5'
-        Default is '' which will keep images for all months.
+    years : list, optional
+        Comma separated values or ranges of years to include.
+        The default is None which will keep entries for all years.
+        Example: ['1984', '2000-2015']
+    months : list, optional
+        Comma separated values or ranges of months to include.
+        The default is None which will keep entries for all months.
+        Example: ['1', '2', '3-5']
     conus_flag : bool, optional
         If True, remove all non-CONUS entries.
         Remove path < 10, path > 48, row < 25 or row > 43.
@@ -41,16 +42,29 @@ def main(csv_folder, wrs2_tile_list=[], years='', months='', conus_flag=False):
     """
     logging.info('\nFilter/reducing Landsat Metadata CSV files')
 
-    # Additional/custom path/row filtering can be hardcoded
-    # wrs2_tile_list = []
-    path_list = []
-    row_list = []
-    year_list = sorted(list(parse_int_set(years)))
-    month_list = sorted(list(parse_int_set(months)))
+
+    if wrs2_tiles is not None:
+        wrs2_tile_list = sorted([
+            x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
+    else:
+        wrs2_tile_list = []
+
+    if years is not None:
+        year_list = sorted([x for y in years for x in parse_int_set(y)])
+    else:
+        year_list = []
+
+    if months is not None:
+        month_list = sorted([x for m in months for x in parse_int_set(m)])
+    else:
+        month_list = []
 
     if conus_flag:
         path_list = list(range(10, 49))
         row_list = list(range(25, 44))
+    else:
+        path_list = []
+        row_list = []
 
     csv_file_list = [
         'LANDSAT_8_C1.csv',
@@ -257,7 +271,7 @@ def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
 
 
 def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
+    if not os.path.isdir(os.path.abspath(arg)):
         parser.error('The folder {} does not exist!'.format(arg))
     else:
         return arg
@@ -270,7 +284,7 @@ def parse_int_set(nputstr=""):
     """
     selection = set()
     invalid = set()
-    # tokens are comma seperated values
+    # tokens are comma separated values
     tokens = [x.strip() for x in nputstr.split(',')]
     for i in tokens:
         try:
@@ -302,28 +316,30 @@ def arg_parse():
         description='Filter Landsat Collection 1 bulk metadata CSV files',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
-        default=os.getcwd(), help='Landsat bulk metadata CSV folder')
+        '--csv', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
+        help='Landsat bulk metadata CSV folder')
     parser.add_argument(
-        '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
-        help='Space separated string of Landsat path/rows to keep '
+        '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
+        help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
-        '-y', '--years', default='1984-2017', type=str,
-        help='Comma separated list or range of years to download'
-             '(i.e. "--years 1984,2000-2015")')
+        '-y', '--years', default=None, nargs='+',
+        help='Space/comma separated list of years or year ranges to keep'
+             '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
-        '-m', '--months', default='1-12', type=str,
-        help='Comma separated list or range of months to download'
-             '(i.e. "--months 1,2,3-5")')
+        '-m', '--months', default=None, nargs='+',
+        help='Space/comma separated list of months or month ranges to keep'
+             '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
         '--conus', default=False, action='store_true',
-        help='Filter CSV files to only CONUS Landsat images')
+        help='Filter CSV files to only CONUS Landsat images/tiles')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
+    # Convert relative paths to absolute paths
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
 
@@ -335,5 +351,5 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, wrs2_tile_list=args.pathrows,
+    main(csv_folder=args.csv, wrs2_tiles=args.wrs2,
          years=args.years, months=args.months, conus_flag=args.conus)

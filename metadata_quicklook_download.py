@@ -14,7 +14,7 @@ except ImportError:
 import pandas as pd
 
 
-def main(csv_folder, output_folder, wrs2_tile_list=[], years=None, months=None,
+def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
          skip_list_path=None, overwrite_flag=False):
     """Download Landsat Collection 1 quicklook images
 
@@ -24,20 +24,20 @@ def main(csv_folder, output_folder, wrs2_tile_list=[], years=None, months=None,
         Folder path of the Landsat metadata CSV files.
     output_folder : str
         Folder path where the quicklook images will be saved.
-    wrs2_tile_list : list, optional
-        Download images for specified Landsat path/rows.
+    wrs2_tiles : list, optional
+        Landsat WRS2 tiles (path/rows) to download images for.
+        The default is None which will download images for all tiles.
         Example: ['p043r032', 'p043r033']
-        Default is [] which will download all images in metadata CSV.
-    years : str, optional
+    years : list, optional
         Comma separated values or ranges of years to download.
-        Example: '1984,2000-2015'
-        Default is '' which will download images for all years.
-    months : str, optional
+        The default is None which will download images for all years.
+        Example: ['1984', '2000-2015']
+    months : list, optional
         Comma separated values or ranges of months to download.
-        Example: '1,2,3-5'
-        Default is '' which will download images for all months.
+        The default is None which will download images for all months.
+        Example: ['1', '2', '3-5']
     skip_list_path : str, optional
-        File path of the Landsat skip list.
+        File path of an existing Landsat skip list (the default is None).
     overwrite_flag : bool, optional
         If True, overwrite existing files (the default is False).
 
@@ -53,18 +53,22 @@ def main(csv_folder, output_folder, wrs2_tile_list=[], years=None, months=None,
     logging.info('\nDownload Landsat Collection 1 Quicklooks')
     cloud_folder_name = 'cloudy'
 
-    # Custom year filtering can be applied here
+    if wrs2_tiles is not None:
+        wrs2_tile_list = sorted([
+            x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
+    else:
+        wrs2_tile_list = []
+
     if years is not None:
-        year_list = sorted(list(parse_int_set(years)))
+        year_list = sorted([x for y in years for x in parse_int_set(y)])
     else:
         year_list = []
-    if years is not None:
-        month_list = sorted(list(parse_int_set(months)))
+
+    if months is not None:
+        month_list = sorted([x for m in months for x in parse_int_set(m)])
     else:
         month_list = []
 
-    # Additional/custom path/row filtering can be hardcoded
-    # wrs2_tile_list = []
     path_list = []
     row_list = []
     
@@ -120,7 +124,8 @@ def main(csv_folder, output_folder, wrs2_tile_list=[], years=None, months=None,
 
     # All other data types and categories will be written to cloudy folder
     # "A1" isn't documented but appear to be good Landsat 7 L1TP images
-    data_types = ['L1TP']
+    data_types = ['OLI_TIRS_L1TP', 'ETM_L1TP', 'TM_L1TP', 'L1TP']
+    # data_types = ['L1TP']
     categories = ['T1', 'RT', 'A1']
 
     # Setup and validate the path/row lists
@@ -403,8 +408,15 @@ def download_file(file_url, file_path):
 #     return ini_path
 
 
+def is_valid_file(parser, arg):
+    if not os.path.isfile(os.path.abspath(arg)):
+        parser.error('The file {} does not exist!'.format(arg))
+    else:
+        return arg
+
+
 def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
+    if not os.path.isdir(os.path.abspath(arg)):
         parser.error('The folder {} does not exist!'.format(arg))
     else:
         return arg
@@ -417,7 +429,7 @@ def parse_int_set(nputstr=""):
     """
     selection = set()
     invalid = set()
-    # tokens are comma seperated values
+    # tokens are comma separated values
     tokens = [x.strip() for x in nputstr.split(',')]
     for i in tokens:
         try:
@@ -446,41 +458,48 @@ def parse_int_set(nputstr=""):
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description='Download Landsat Collection 1 quicklook images\n'
-                    'Beware that many script parameters are hardcoded.',
+        description='Download Landsat Collection 1 quicklook images',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
-        default=os.getcwd(), help='Landsat metadata CSV folder')
+        '--csv', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
+        help='Landsat metadata CSV folder')
     parser.add_argument(
         '--output', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
         help='Output folder')
     parser.add_argument(
-        '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
-        help='Space separated string of Landsat path/rows to download '
+        '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
+        help='Space/comma separated list of Landsat WRS2 tiles to download '
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
-        '-y', '--years', default=None, type=str,
-        help='Comma separated list or range of years to download'
-             '(i.e. "--years 1984,2000-2015")')
+        '-y', '--years', default=None, nargs='+',
+        help='Space/comma separated list of years or year_ranges to download'
+             '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
-        '-m', '--months', default=None, type=str,
-        help='Comma separated list or range of months to download'
-             '(i.e. "--months 1,2,3-5")')
+        '-m', '--months', default=None, nargs='+',
+        help='Space/comma separated list of months or month ranges to download'
+             '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
-        '--skiplist', default=None, help='Skips files in skip list')
+        '--skiplist', default=None, metavar='FILE',
+        type=lambda x: is_valid_file(parser, x),
+        help='File path of scene IDs that should be downloaded directly to '
+             'the "cloudy" scenes folder')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
-        help='Include existing scenes in scene download list')
+        help='Overwite existing quicklooks')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
+    # Convert relative paths to absolute paths
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
     if os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
+    if os.path.isfile(os.path.abspath(args.skiplist)):
+        args.skiplist = os.path.abspath(args.skiplist)
 
     return args
 
@@ -489,13 +508,7 @@ if __name__ == '__main__':
     args = arg_parse()
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
-    logging.info('\n{0}'.format('#' * 80))
-    logging.info('{0:<20s} {1}'.format(
-        'Run Time Stamp:', dt.datetime.now().isoformat(' ')))
-    logging.info('{0:<20s} {1}'.format('Current Directory:', os.getcwd()))
-    logging.info('{0:<20s} {1}'.format(
-        'Script:', os.path.basename(sys.argv[0])))
 
     main(csv_folder=args.csv, output_folder=args.output,
-         wrs2_tile_list=args.pathrows, years=args.years, months=args.months,
+         wrs2_tiles=args.wrs2, years=args.years, months=args.months,
          skip_list_path=args.skiplist, overwrite_flag=args.overwrite)

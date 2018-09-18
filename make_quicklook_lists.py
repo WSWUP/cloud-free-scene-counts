@@ -11,7 +11,7 @@ import sys
 import pandas as pd
 
 
-def main(csv_folder, quicklook_folder, output_folder, wrs2_tile_list=[],
+def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
          skip_list_path=None, summary_flag=True):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
@@ -23,11 +23,12 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tile_list=[],
         Folder path of the Landsat quicklook images.
     output_folder : str
         Folder path to save skip list.
-    wrs2_tile_list : list, optional
-        Landsat path/rows to process (the default is []).
+    wrs2_tiles : list, optional
+        Landsat WRS2 tiles (path/rows) to include in output files.
+        The default is None which will include images for all tiles.
         Example: ['p043r032', 'p043r033']
     skip_list_path : str, optional
-        File path of Landsat skip list (the default is None).
+        File path of an existing Landsat skip list (the default is None).
     summary_flag : bool, optional
         Generate clear scene counts summary file (the default is True).
 
@@ -46,8 +47,12 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tile_list=[],
 
     year_list = list(range(1984, dt.datetime.now().year + 1))
 
-    # Additional/custom path/row filtering can be hardcoded
-    # wrs2_tile_list = []
+    if wrs2_tiles is not None:
+        wrs2_tile_list = sorted([
+            x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
+    else:
+        wrs2_tile_list = []
+
     path_list = []
     row_list = []
 
@@ -58,10 +63,10 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tile_list=[],
     ]
 
     # Input fields
-    acq_date_col = 'ACQUISITION_DATE'
-    browse_url_col = 'BROWSE_REFLECTIVE_PATH'
+    # acq_date_col = 'ACQUISITION_DATE'
+    # browse_url_col = 'BROWSE_REFLECTIVE_PATH'
     product_id_col = 'LANDSAT_PRODUCT_ID'
-    scene_id_col = 'LANDSAT_SCENE_ID'
+    # scene_id_col = 'LANDSAT_SCENE_ID'
 
     quicklook_re = re.compile(
         '(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})_'
@@ -285,8 +290,15 @@ def check_wrs2_tiles(wrs2_tile_list=[], path_list=[], row_list=[]):
     return wrs2_tile_list, path_list, row_list
 
 
+def is_valid_file(parser, arg):
+    if not os.path.isfile(os.path.abspath(arg)):
+        parser.error('The file {} does not exist!'.format(arg))
+    else:
+        return arg
+
+
 def is_valid_folder(parser, arg):
-    if not os.path.isdir(arg):
+    if not os.path.isdir(os.path.abspath(arg)):
         parser.error('The folder {} does not exist!'.format(arg))
     else:
         return arg
@@ -295,34 +307,41 @@ def is_valid_folder(parser, arg):
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
-        description='Make keep and skip scene lists from quicklook images\n'
-                    'Beware that many values are hardcoded!',
+        description='Make keep and skip scene lists from quicklook images',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument(
-        '--csv', type=lambda x: is_valid_folder(parser, x), metavar='FOLDER',
-        default=os.getcwd(), help='Landsat metadata CSV folder')
+        '--csv', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
+        help='Landsat metadata CSV folder')
     parser.add_argument(
-        '--quicklook', type=lambda x: is_valid_folder(parser, x),
-        metavar='FOLDER', default=os.getcwd(),
+        '--quicklook', default=os.getcwd(), metavar='FOLDER',
+        type=lambda x: is_valid_folder(parser, x),
         help='Landsat quicklook image folder')
     parser.add_argument(
         '--output', default=os.getcwd(), metavar='FOLDER',
         help='Output folder')
     parser.add_argument(
-        '-pr', '--pathrows', nargs='+', default=None, metavar='pXXXrYYY',
-        help='Space separated string of Landsat path/rows to keep '
+        '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
+        help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. -pr p043r032 p043r033)')
     parser.add_argument(
-        '--skiplist', default=None, help='Skips files in skip list')
+        '--skiplist', default=None, metavar='FILE',
+        type=lambda x: is_valid_file(parser, x),
+        help='File path of scene IDs that should be written directly to the '
+             'cloudy_scenes.txt file')
     parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
+    # Convert relative paths to absolute paths
     if args.quicklook and os.path.isfile(os.path.abspath(args.quicklook)):
         args.quicklook = os.path.abspath(args.quicklook)
     if args.output and os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
+    if os.path.isfile(os.path.abspath(args.skiplist)):
+        args.skiplist = os.path.abspath(args.skiplist)
+
     return args
 
 
@@ -332,5 +351,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
     main(csv_folder=args.csv, quicklook_folder=args.quicklook,
-         output_folder=args.output, wrs2_tile_list=args.pathrows,
+         output_folder=args.output, wrs2_tiles=args.wrs2,
          skip_list_path=args.skiplist)
