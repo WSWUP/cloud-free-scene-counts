@@ -27,7 +27,7 @@ python metadata_csv_download.py
 
 ## Filter/reduce Landsat Bulk Metadata CSV files
 
-The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  Path/row specific filtering can also be applied using the "-pr" or "--pathrows" argument.
+The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  WRS2 tile (i.e. path/row) specific filtering can also be applied using the "-pr" or "--wrs2" argument.
 
 ```
 python metadata_csv_filter.py -pr p043r032 p043r33
