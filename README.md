@@ -19,7 +19,7 @@ For information on installing Python and Pandas or details on how to run the Pyt
 
 ## Download Landsat Bulk Metadata CSV files
 
-The starting point for generating monthly cloud free scene counts is to obtain the full Landsat metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The CSV files can be downloaded by running the provided python script "metadata_csv_download.py" or manually from the [Landsat Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
+The starting point for generating monthly cloud free scene counts is to obtain the full Landsat metadata CSV files.  These files are updated each day (Landsat 7 and 8), but for generating historical scene counts it is generally only necessary to download them once.  The CSV files can be downloaded by running the "metadata_csv_download.py" script or downloaded manually from the [Landsat Metadata Site](https://landsat.usgs.gov/download-entire-collection-metadata).
 
 ```
 python metadata_csv_download.py
@@ -27,24 +27,21 @@ python metadata_csv_download.py
 
 ## Filter/reduce Landsat Bulk Metadata CSV files
 
-The CSV files can then be filtered and reduced using the provided python script "metadata_csv_filter.py" or manually filtered using a text editor or spread sheet program.  WRS2 tile (i.e. path/row) specific filtering can also be applied using the "-pr" or "--wrs2" argument.
+The CSV files can be filtered and reduced using the "metadata_csv_filter.py" script or manually filtered using a text editor or spread sheet program.  WRS2 tile (path/row), year, and month filtering can be applied using the "--wrs2", "--years", and "--months" arguments.
 
 ```
-python metadata_csv_filter.py -pr p043r032 p043r33
+python metadata_csv_filter.py --wrs2 p043r032 p043r33 --years 2010 2013-2015
 ```
 
 ## Download Landsat Quicklooks
 
-The Landsat quicklook images can be downloaded using the provided script "metadata_csv_image_download.py".  The script will download the quicklooks into separate folders by path/row and year.  Any images that are not L1TP (fully georectified) will be automatically moved into a "cloudy" folder within that year.
+The Landsat quicklook images can be downloaded using the "quicklook_download.py" script.  The script will download the quicklooks into separate folders by WRS2 tile (path/row) and year.  Any images that are not L1TP (fully georectified) will be automatically moved into a "cloudy" folder within that year.
 
-From the command prompt, change directory into the quicklooks folder, then enter the following command, where FOLDER is the path to the folder containing the bulk metadata CSV files.  If "--csv" is not set, the script will attempt to use the current working directory.
 ```
-python quicklook_download.py --csv FOLDER
+python quicklook_download.py
 ```
 
-If you double click the download script, it should prompt open a GUI prompting you to select the folder containing the CSV files.
-
-The download script can be manually modified to limit the path, rows, or path/rows that are processed.
+Filtering by WRS2 tile, year, and month can also be applied to the quicklook download script using the same "--wrs2", "--years", and "--months" arguments.
 
 ## Sort Cloudy Landsat Quicklooks
 

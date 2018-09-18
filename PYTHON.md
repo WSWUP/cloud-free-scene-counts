@@ -41,35 +41,44 @@ To change to the cloud free scene counts folder, assuming you installed it in yo
 
 
 
-#### Command Line Arguments
+## Command Line Arguments
 
 The python scripts have additional arguments that can be set from the command line.  To view these options, run the script with the "-h" argument.
 
 ```
 python metadata_quicklook_download.py -h
 
-usage: metadata_quicklook_download.py [-h] [--csv CSV] [--output OUTPUT]
-                                      [-pr pXXXrYYY [pXXXrYYY ...]]
-                                      [--skiplist SKIPLIST] [-o] [-d]
+usage: quicklook_download.py [-h] [--csv FOLDER] [--output FOLDER]
+                             [-pr pXXXrYYY [pXXXrYYY ...]]
+                             [-y YEARS [YEARS ...]] [-m MONTHS [MONTHS ...]]
+                             [--skiplist FILE] [-id {product,short}] [-o] [-d]
 
-Download Landsat Collection 1 quicklook images Beware that many script
-parameters are hardcoded.
+Download Landsat Collection 1 quicklook images
 
 optional arguments:
   -h, --help            show this help message and exit
-  --csv CSV             Landsat bulk metadata CSV folder (default:
-                        D:\Projects\Inyo\cloud-free-scene-counts)
-  --output OUTPUT       Output folder (default: D:\Projects\Inyo\cloud-free-
-                        scene-counts)
-  -pr pXXXrYYY [pXXXrYYY ...], --pathrows pXXXrYYY [pXXXrYYY ...]
-                        Space separated string of Landsat path/rows to
+  --csv FOLDER          Landsat metadata CSV folder (default:
+                        C:\Projects\cloud-free-scene-counts\example)
+  --output FOLDER       Output folder (default: C:\Projects\cloud-free-scene-
+                        counts\example)
+  -pr pXXXrYYY [pXXXrYYY ...], --wrs2 pXXXrYYY [pXXXrYYY ...]
+                        Space/comma separated list of Landsat WRS2 tiles to
                         download (i.e. -pr p043r032 p043r033) (default: None)
-  --skiplist SKIPLIST   Skips files in skip list (default: None)
-  -o, --overwrite       Include existing scenes in scene download list
-                        (default: False)
+  -y YEARS [YEARS ...], --years YEARS [YEARS ...]
+                        Space/comma separated list of years or year_ranges to
+                        download (i.e. "--years 1984 2000-2015") (default:
+                        None)
+  -m MONTHS [MONTHS ...], --months MONTHS [MONTHS ...]
+                        Space/comma separated list of months or month ranges
+                        to download (i.e. "--months 1 2 3-5") (default: None)
+  --skiplist FILE       File path of scene IDs that should be downloaded
+                        directly to the "cloudy" scenes folder (default: None)
+  -id {product,short}, --id_type {product,short}
+                        Landsat ID type (default: product)
+  -o, --overwrite       Overwite existing quicklooks (default: False)
   -d, --debug           Debug level logging (default: 20)
 ```
 
-#### Style Guide
+## Style Guide
 
 All Python code should follow the [PEP8 Style Guide](https://www.python.org/dev/peps/pep-0008/).

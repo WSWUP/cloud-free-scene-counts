@@ -285,7 +285,7 @@ def arg_parse():
     parser.add_argument(
         '-pr', '--wrs2', required=True, nargs='+', metavar='pXXXrYYY',
         help='Space/comma separated list of Landsat WRS2 tiles to keep '
-             '(i.e. -pr p043r032 p043r033)')
+             '(i.e. --wrs2 p043r032 p043r033)')
     parser.add_argument(
         '-y', '--years', required=True, nargs='+',
         help='Space/comma separated list of years or year ranges to keep '
