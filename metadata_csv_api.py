@@ -3,9 +3,9 @@ import json
 import logging
 import os
 import pprint
-import requests
 
 import pandas as pd
+import requests
 
 API_URL = 'https://earthexplorer.usgs.gov/inventory/json/v/1.4.0/'
 

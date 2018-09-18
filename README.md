@@ -11,7 +11,9 @@ The general steps are:
 
 ## Python Dependencies
 
-You will need Python and the [Pandas](http://pandas.pydata.org) module in order to run the scripts.
+The following module must be present to run some of the cloud free scene count scripts:
+* [pandas](http://pandas.pydata.org)
+* [requests](http://docs.python-requests.org)
 
 For information on installing Python and Pandas or details on how to run the Python scripts, please see the [Python README](PYTHON.md).
 
@@ -61,6 +63,3 @@ python make_quicklook_lists.py
 
 For a detailed walk through of running the scripts and generating the scene list files, please see the provided [example](./example/EXAMPLE.md).
 
-#### Landsat Product Identifier
-
-We are deliberately using a "shortened" collection 1 product identifier to match the Earth Engine system index for the collection 1 images.  The ID doesn't include the processing correction level, processing date, collection number, or collection category.  For example the original Landsat product identifier LT05_L1TP_043030_20001014_20160922_01_T1 is saved in the output files as LT05_043030_20001014.  This is done since an image is "cloudy" even if the processing date or correction level changes.

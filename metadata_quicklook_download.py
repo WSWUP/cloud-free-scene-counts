@@ -2,16 +2,10 @@ import argparse
 import logging
 import os
 import re
-import shutil
 import sys
-try:
-    # Python 3
-    import urllib.request as urlrequest
-except ImportError:
-    # Python 2
-    import urllib as urlrequest
 
 import pandas as pd
+import requests
 
 
 def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
@@ -347,14 +341,14 @@ def download_file(file_url, file_path):
     """"""
     logging.debug('  Downloading file')
     logging.debug('  {}'.format(file_url))
-    # with urlrequest.urlopen(file_url) as response notation fails in Python 2
     try:
-        response = urlrequest.urlopen(file_url)
+        r = requests.get(file_url)
         with open(file_path, 'wb') as output_f:
-            shutil.copyfileobj(response, output_f)
+            for chunk in r.iter_content(chunk_size=128):
+                output_f.write(chunk)
     except Exception as e:
-        logging.info('  {}\n  Try manually checking the bulk metadata '
-                     'website\n'.format(e))
+        logging.info('  {}\n  Try manually checking the quicklook '
+                     'URL\n'.format(e))
     # urlrequest.urlretrieve(file_url, file_path)
 
 

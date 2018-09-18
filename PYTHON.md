@@ -4,6 +4,7 @@ The cloud free scene count Python scripts have been tested using both Python 3.6
 
 The following module must be present to run some of the cloud free scene count scripts:
 * [pandas](http://pandas.pydata.org)
+* [requests](http://docs.python-requests.org)
 
 ## Anaconda
 
@@ -11,16 +12,16 @@ The easiest way of obtaining Python and all of the necessary external modules, i
 
 #### Installing/Updating Python Modules
 
-The Pandas module needed for these scripts is installed by default with Anaconda but additional modules can be installed or updated using "conda".  For example to install the pandas module, enter the following in a command prompt or terminal window:
+The Requests and Pandas modules needed for these scripts are installed by default with Anaconda, but additional modules can be installed or updated using "conda".  For example to install the pandas and requests modules, enter the following in a command prompt or terminal window:
 
 ```
-conda install pandas
+conda install pandas requests
 ```
 
-To update the pandas module to the latest version, enter the following in a command prompt or terminal window:
+To update the pandas and requests module to the latest version, enter the following in a command prompt or terminal window:
 
 ```
-conda update pandas
+conda update pandas requests
 ```
 
 ## Running the Python Scripts
