@@ -459,9 +459,9 @@ def arg_parse():
     # Convert relative paths to absolute paths
     if args.csv and os.path.isdir(os.path.abspath(args.csv)):
         args.csv = os.path.abspath(args.csv)
-    if os.path.isdir(os.path.abspath(args.output)):
+    if args.output and os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
-    if os.path.isfile(os.path.abspath(args.skiplist)):
+    if args.skiplist and os.path.isfile(os.path.abspath(args.skiplist)):
         args.skiplist = os.path.abspath(args.skiplist)
 
     return args

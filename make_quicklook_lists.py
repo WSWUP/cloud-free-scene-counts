@@ -333,7 +333,7 @@ def arg_parse():
         args.quicklook = os.path.abspath(args.quicklook)
     if args.output and os.path.isdir(os.path.abspath(args.output)):
         args.output = os.path.abspath(args.output)
-    if os.path.isfile(os.path.abspath(args.skiplist)):
+    if args.skiplist and os.path.isfile(os.path.abspath(args.skiplist)):
         args.skiplist = os.path.abspath(args.skiplist)
 
     return args
