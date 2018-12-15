@@ -176,8 +176,12 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
                 continue
 
             # Look up PRODUCT_ID/SCENE_ID using metadata CSV data
-            product_id = quicklook_ids[name]
-
+            try:
+                product_id = quicklook_ids[name]
+            except:
+                logging.debug('  {} - skip list, skipping'.format(
+                    quicklook_ids))
+                continue
             if input_skip_list and product_id in input_skip_list:
                 logging.debug('  {} - skip list, skipping'.format(
                     product_id))
