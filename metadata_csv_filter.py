@@ -1,8 +1,8 @@
 import argparse
 import logging
 import os
+import pprint
 import re
-# import shutil
 import sys
 
 import pandas as pd
@@ -40,7 +40,6 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
 
     """
     logging.info('\nFilter/reducing Landsat Metadata CSV files')
-
 
     if wrs2_tiles is not None:
         wrs2_tile_list = sorted([

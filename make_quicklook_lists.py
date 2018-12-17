@@ -65,6 +65,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     ]
 
     product_id_col = 'LANDSAT_PRODUCT_ID'
+    wrs2_tile_col = 'WRS2_TILE'
 
     quicklook_re = re.compile(
         '(?P<year>\d{4})(?P<month>\d{2})(?P<day>\d{2})_'
@@ -96,8 +97,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
 
     # Read in metadata CSV files
     logging.info('\nReading metadata CSV files')
-    # product_ids = set()
-    quicklook_ids = dict()
+    quicklook_ids = defaultdict(dict)
     for csv_name in csv_file_list:
         logging.debug('  {}'.format(csv_name))
         try:
@@ -117,15 +117,18 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
                 dt.datetime.strptime(x[0][17:25], '%Y%m%d').strftime('%Y%m%d_%j'),
                 x[0][:4]),
             axis=1)
-        input_df.set_index('QUICKLOOK', drop=True, inplace=True)
+        input_df.set_index([wrs2_tile_col, 'QUICKLOOK'], drop=True, inplace=True)
 
         if id_type.lower() == 'short':
             input_df['temp_id'] = input_df[[product_id_col]].apply(
                 lambda x: '{}_{}_{}'.format(x[0][0:4], x[0][10:16], x[0][17:25]),
                 axis=1)
-            quicklook_ids.update(input_df['temp_id'].to_dict())
+            update_dict = input_df['temp_id'].to_dict()
         else:
-            quicklook_ids.update(input_df[product_id_col].to_dict())
+            update_dict = input_df[product_id_col].to_dict()
+
+        for [wrs2_tile, image_id], product_id in update_dict.items():
+            quicklook_ids[wrs2_tile][image_id] = product_id
 
     logging.debug('\nQuicklook PRODUCT_ID lookup:')
     logging.debug(pprint.pformat(quicklook_ids))
@@ -173,13 +176,15 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
             try:
                 y, m, d, doy, landsat = quicklook_re.match(name).groups()
             except Exception as e:
+                logging.debug('  {} - quicklook_re exception, skipping'.format(
+                    name))
                 continue
 
             # Look up PRODUCT_ID/SCENE_ID using metadata CSV data
             try:
-                product_id = quicklook_ids[name]
+                product_id = quicklook_ids[wrs2_tile][name]
             except:
-                logging.debug('  {} - skip list, skipping'.format(
+                logging.debug('  {} - quicklook_id exception, skipping'.format(
                     quicklook_ids))
                 continue
             if input_skip_list and product_id in input_skip_list:
