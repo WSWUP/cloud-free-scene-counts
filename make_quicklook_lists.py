@@ -65,6 +65,8 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     ]
 
     product_id_col = 'LANDSAT_PRODUCT_ID'
+    wrs2_path_col = 'WRS_PATH'
+    wrs2_row_col = 'WRS_ROW'
     wrs2_tile_col = 'WRS2_TILE'
 
     quicklook_re = re.compile(
@@ -99,7 +101,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     logging.info('\nReading metadata CSV files')
     quicklook_ids = defaultdict(dict)
     for csv_name in csv_file_list:
-        logging.debug('  {}'.format(csv_name))
+        logging.info('{}'.format(csv_name))
         try:
             input_df = pd.read_csv(os.path.join(csv_folder, csv_name))
         except Exception as e:
@@ -111,13 +113,24 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
             logging.debug('  Empty DataFrame, skipping file')
             continue
 
+        # Compute WRS2 tile column if it doesn't exist
+        if (wrs2_tile_col not in input_df.columns.values and
+                wrs2_path_col in input_df.columns.values and
+                wrs2_row_col in input_df.columns.values):
+            logging.debug('  {} field doesn\'t exist, adding'.format(
+                wrs2_tile_col))
+            input_df[wrs2_tile_col] = input_df[[wrs2_path_col, wrs2_row_col]] \
+                .apply(lambda x: 'p{:03d}r{:03d}'.format(x[0], x[1]),
+                       axis=1)
+
         # Compute quicklook image name from PRODUCT_ID
         input_df['QUICKLOOK'] = input_df[[product_id_col]].apply(
             lambda x: '{}_{}.jpg'.format(
                 dt.datetime.strptime(x[0][17:25], '%Y%m%d').strftime('%Y%m%d_%j'),
                 x[0][:4]),
             axis=1)
-        input_df.set_index([wrs2_tile_col, 'QUICKLOOK'], drop=True, inplace=True)
+        input_df.set_index([wrs2_tile_col, 'QUICKLOOK'],
+                           drop=True, inplace=True)
 
         if id_type.lower() == 'short':
             input_df['temp_id'] = input_df[[product_id_col]].apply(
@@ -132,7 +145,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
 
     logging.debug('\nQuicklook PRODUCT_ID lookup:')
     logging.debug(pprint.pformat(quicklook_ids))
-    logging.debug('')
+    logging.info('')
     # input('ENTER')
 
     output_keep_list = []

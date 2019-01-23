@@ -174,7 +174,7 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
             if (wrs2_tile_list and
                     wrs2_path_col_out in input_df.columns and
                     wrs2_row_col_out in input_df.columns):
-                logging.debug('  Filtering by path/row')
+                logging.debug('  Computing WRS2 tile')
                 try:
                     input_df[wrs2_tile_col] = input_df[[wrs2_path_col_out,
                                                         wrs2_row_col_out]]\
@@ -183,6 +183,8 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
                 except ValueError:
                     logging.info('  Possible empty DataFrame, skipping file')
                     continue
+
+                logging.debug('  Filtering by path/row')
                 input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
                 # input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
