@@ -14,12 +14,12 @@ If you would like to recreate the example CSV files, the metadata_csv_download.p
 
 In a Windows command prompt, the command would be:
 ```
-python ..\metadata_csv_download.py --overwrite
+python ..\metadata_csv_download.py --overwrite --years 2000 2015
 ```
 
 In a Mac/Linux terminal windows, the same command would be (note the forward slashes instead of back slashes):
 ```
-python ../metadata_csv_download.py --overwrite
+python ../metadata_csv_download.py --overwrite --years 2000 2015
 ```
 
 The "..\" or "../" notation in the script call indicates that Python should look into the parent folder for the download script.  If a default output folder is not using the "--csv" command line argument, the script will attempt to use the current working directory, which in this case will be the example folder.  If the "--overwrite" command line argument is not set, the script will skip any CSV files that already exist in the output folder.

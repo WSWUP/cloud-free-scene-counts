@@ -12,7 +12,7 @@ import pandas as pd
 
 
 def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
-         skip_list_path=None, summary_flag=True, id_type='product'):
+         years=None, skip_list_path=None, summary_flag=True, id_type='product'):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Parameters
@@ -27,6 +27,10 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         Landsat WRS2 tiles (path/rows) to include in output files.
         The default is None which will include images for all tiles.
         Example: ['p043r032', 'p043r033']
+    years : list, optional
+        Comma separated values or ranges of years to include.
+        The default is None which will keep entries for all years.
+        Example: ['1984', '2000-2015']
     skip_list_path : str, optional
         File path of an existing Landsat skip list (the default is None).
     summary_flag : bool, optional
@@ -47,7 +51,11 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
 
     cloud_folder = 'cloudy'
 
-    year_list = list(range(1984, dt.datetime.now().year + 1))
+    if years is not None:
+        year_list = sorted([x for y in years for x in parse_int_set(y)])
+    else:
+        year_list = []
+    # year_list = list(range(1984, dt.datetime.now().year + 1))
 
     if wrs2_tiles is not None:
         wrs2_tile_list = sorted([
@@ -63,6 +71,11 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         'LANDSAT_ETM_C1.csv',
         'LANDSAT_TM_C1.csv',
     ]
+    csv_years = {
+        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+    }
 
     product_id_col = 'LANDSAT_PRODUCT_ID'
     wrs2_path_col = 'WRS_PATH'
@@ -101,17 +114,40 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     logging.info('\nReading metadata CSV files')
     quicklook_ids = defaultdict(dict)
     for csv_name in csv_file_list:
+        csv_path = os.path.join(csv_folder, csv_name)
         logging.info('{}'.format(csv_name))
+
+        if year_list and not csv_years[csv_name].intersection(set(year_list)):
+            logging.info('  No data for target year(s), skipping file')
+            continue
+        elif not os.path.isfile(csv_path):
+            logging.info('  The CSV file does not exist, skipping')
+
         try:
-            input_df = pd.read_csv(os.path.join(csv_folder, csv_name))
+            input_df = pd.read_csv(csv_path)
         except Exception as e:
-            logging.warning(
-                '  CSV file could not be read or does not exist, skipping')
+            logging.warning('  The CSV file could not be read, skipping')
             logging.debug('  Exception: {}'.format(e))
             continue
         if input_df.empty:
             logging.debug('  Empty DataFrame, skipping file')
             continue
+
+        # Warn the user if the WRS path and row columns don't exist
+        if (wrs2_path_col not in input_df.columns.values and
+                'path' in input_df.columns.values):
+            logging.error(
+                '\nERROR: The {} field doesn\'t exist in the CSV'
+                '\n  You may be attempting to run the script on the unfiltered '
+                'metadata CSV file\n  Exiting script'.format(wrs2_path_col))
+            return False
+        elif (wrs2_row_col not in input_df.columns.values and
+                'row' in input_df.columns.values):
+            logging.error(
+                '\nERROR: The {} field doesn\'t exist in the CSV'
+                '\n  You may be attempting to run the script on the unfiltered '
+                'metadata CSV file\n  Exiting script'.format(wrs2_path_col))
+            return False
 
         # Compute WRS2 tile column if it doesn't exist
         if (wrs2_tile_col not in input_df.columns.values and
@@ -129,6 +165,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
                 dt.datetime.strptime(x[0][17:25], '%Y%m%d').strftime('%Y%m%d_%j'),
                 x[0][:4]),
             axis=1)
+        # print(input_df.head())
         input_df.set_index([wrs2_tile_col, 'QUICKLOOK'],
                            drop=True, inplace=True)
 
@@ -338,6 +375,10 @@ def arg_parse():
         help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. --wrs2 p043r032 p043r033)')
     parser.add_argument(
+        '-y', '--years', default=None, nargs='+',
+        help='Space/comma separated list of years or year ranges to keep '
+             '(i.e. "--years 1984 2000-2015")')
+    parser.add_argument(
         '--skiplist', default=None, metavar='FILE',
         type=lambda x: is_valid_file(parser, x),
         help='File path of scene IDs that should be written directly to the '
@@ -367,5 +408,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
     main(csv_folder=args.csv, quicklook_folder=args.quicklook,
-         output_folder=args.output, wrs2_tiles=args.wrs2,
+         output_folder=args.output, wrs2_tiles=args.wrs2, years=args.years,
          skip_list_path=args.skiplist, id_type=args.id_type)

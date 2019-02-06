@@ -73,6 +73,11 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         'LANDSAT_ETM_C1.csv',
         'LANDSAT_TM_C1.csv',
     ]
+    csv_years = {
+        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+    }
 
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
@@ -131,21 +136,25 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_folder, csv_name)
 
-        # Read in the CSV, remove extra columns
+        if year_list and not csv_years[csv_name].intersection(set(year_list)):
+            logging.info('  No data for target year(s), skipping file')
+            continue
+        elif not os.path.isfile(csv_path):
+            logging.info('  The CSV file does not exist, skipping')
+
         try:
             input_df = pd.read_csv(
                 csv_path, usecols=input_cols, parse_dates=[acq_date_col])
         except Exception as e:
-            logging.warning(
-                '  CSV file could not be read or does not exist, skipping')
+            logging.warning('  The CSV file could not be read, skipping')
             logging.debug('  Exception: {}'.format(e))
             continue
-        logging.debug('  Fields: {}'.format(', '.join(input_df.columns.values)))
-        # logging.debug(input_df.head())
-        logging.debug('  Initial scene count: {}'.format(len(input_df)))
         if input_df.empty:
             logging.debug('  Empty DataFrame, skipping file')
             continue
+        # logging.debug(input_df.head())
+        logging.debug('  Fields: {}'.format(', '.join(input_df.columns.values)))
+        logging.debug('  Initial scene count: {}'.format(len(input_df)))
 
         # Filter scenes first by path and row separately
         if path_list:

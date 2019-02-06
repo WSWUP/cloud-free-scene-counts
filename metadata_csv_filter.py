@@ -69,6 +69,11 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         'LANDSAT_ETM_C1.csv',
         'LANDSAT_TM_C1.csv',
     ]
+    csv_years = {
+        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+    }
 
     # Input fields (default values in bulk metadata CSV file)
     acq_date_col = 'acquisitionDate'
@@ -123,8 +128,17 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
 
     # Process each CSV
     for csv_name in csv_file_list:
-        logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_folder, csv_name)
+        logging.info('{}'.format(csv_name))
+        logging.debug('  {}'.format(os.path.join(csv_folder, csv_name)))
+
+        if year_list and not csv_years[csv_name].intersection(set(year_list)):
+            # logging.info('  No data for target year(s), skipping file')
+            logging.info('  No data for target year(s), removing file')
+            os.remove(csv_path)
+            continue
+        elif not os.path.isfile(csv_path):
+            logging.info('  The CSV file does not exist, skipping')
 
         # Process the CSVs in chunks to limit the memory usage
         logging.info('  Filtering by chunk')

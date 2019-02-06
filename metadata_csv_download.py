@@ -6,13 +6,18 @@ import os
 import requests
 
 
-def main(csv_folder, overwrite_flag=False):
+def main(csv_folder, years=None, overwrite_flag=False):
     """Download Landsat Collection 1 bulk metadata CSV GZ files and extract
 
     Parameters
     ----------
     csv_folder : str
         Folder path where the Landsat bulk metadata CSV files will be saved.
+    years : list, optional
+        Comma separated values or ranges of years to include.
+        CSV files will only be downloaded if they include data for target years.
+        The default is None which will download the Landsat 5, 7, & 8 CSV files.
+        Example: ['1984', '2000-2015']
     overwrite_flag : bool, optional
         If True, overwrite existing CSV files (the default is False).
 
@@ -36,14 +41,27 @@ def main(csv_folder, overwrite_flag=False):
         'LANDSAT_ETM_C1.csv.gz',
         'LANDSAT_TM_C1.csv.gz',
     ]
+    gz_years = {
+        'LANDSAT_8_C1.csv.gz': set(range(2013, 2099)),
+        'LANDSAT_ETM_C1.csv.gz': set(range(1999, 2099)),
+        'LANDSAT_TM_C1.csv.gz': set(range(1984, 2012)),
+    }
+
+    if years is not None:
+        user_years = set([x for y in years for x in parse_int_set(y)])
+    else:
+        user_years = set()
 
     for gz_name in gz_file_list:
         logging.info('{}'.format(gz_name))
         csv_name = gz_name.replace('.gz', '')
-
         gz_path = os.path.join(csv_folder, gz_name)
         csv_path = os.path.join(csv_folder, csv_name)
         file_url = '{}/{}'.format(download_url, gz_name)
+
+        if user_years and not gz_years[gz_name].intersection(user_years):
+            logging.info('  No data for target year(s), skipping file')
+            continue
 
         # Don't redownload unless overwrite or both files don't exist
         if os.path.isfile(csv_path):
@@ -121,6 +139,39 @@ def is_valid_folder(parser, arg):
         return arg
 
 
+def parse_int_set(nputstr=""):
+    """Return list of numbers given a string of ranges
+
+    http://thoughtsbyclayg.blogspot.com/2008/10/parsing-list-of-numbers-in-python.html
+    """
+    selection = set()
+    invalid = set()
+    # tokens are comma separated values
+    tokens = [x.strip() for x in nputstr.split(',')]
+    for i in tokens:
+        try:
+            # typically tokens are plain old integers
+            selection.add(int(i))
+        except:
+            # if not, then it might be a range
+            try:
+                token = [int(k.strip()) for k in i.split('-')]
+                if len(token) > 1:
+                    token.sort()
+                    # we have items separated by a dash
+                    # try to build a valid range
+                    first = token[0]
+                    last = token[len(token) - 1]
+                    for x in range(first, last + 1):
+                        selection.add(x)
+            except:
+                # not an int and not a range...
+                invalid.add(i)
+    # Report invalid tokens before returning valid selection
+    # print "Invalid set: " + str(invalid)
+    return selection
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
@@ -130,6 +181,10 @@ def arg_parse():
         '--csv', default=os.getcwd(), metavar='FOLDER',
         type=lambda x: is_valid_folder(parser, x),
         help='Landsat bulk metadata CSV folder')
+    parser.add_argument(
+        '-y', '--years', default=None, nargs='+',
+        help='Space/comma separated list of years or year ranges to keep '
+             '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
         '-o', '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
@@ -150,4 +205,4 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, overwrite_flag=args.overwrite)
+    main(csv_folder=args.csv, years=args.years, overwrite_flag=args.overwrite)
