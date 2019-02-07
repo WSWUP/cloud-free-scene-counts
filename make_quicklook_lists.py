@@ -12,7 +12,8 @@ import pandas as pd
 
 
 def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
-         years=None, skip_list_path=None, summary_flag=True, id_type='product'):
+         years=None, landsat=[5, 7, 8], skip_list_path=None,
+         summary_flag=True, id_type='product'):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Parameters
@@ -31,6 +32,10 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         Comma separated values or ranges of years to include.
         The default is None which will keep entries for all years.
         Example: ['1984', '2000-2015']
+    landsat : list, optional
+        CSV files will only be downloaded for the specified Landsat missions.
+        The default is to attempt to process Landsat(s) 5, 7, and 8, but this
+        is also dependent on the "years" parameter.
     skip_list_path : str, optional
         File path of an existing Landsat skip list (the default is None).
     summary_flag : bool, optional
@@ -52,29 +57,29 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     cloud_folder = 'cloudy'
 
     if years is not None:
-        year_list = sorted([x for y in years for x in parse_int_set(y)])
+        years = sorted([x for y in years for x in parse_int_set(y)])
     else:
-        year_list = []
-    # year_list = list(range(1984, dt.datetime.now().year + 1))
+        years = []
+    # years = list(range(1984, dt.datetime.now().year + 1))
 
     if wrs2_tiles is not None:
-        wrs2_tile_list = sorted([
+        wrs2_tiles = sorted([
             x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
     else:
-        wrs2_tile_list = []
+        wrs2_tiles = []
 
-    path_list = []
-    row_list = []
+    paths = []
+    rows = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
+    csv_names = {
+        8: 'LANDSAT_8_C1.csv',
+        7: 'LANDSAT_ETM_C1.csv',
+        5: 'LANDSAT_TM_C1.csv',
+    }
     csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        8: set(range(2013, 2099)),
+        7: set(range(1999, 2099)),
+        5: set(range(1984, 2012)),
     }
 
     product_id_col = 'LANDSAT_PRODUCT_ID'
@@ -92,8 +97,7 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         logging.info('\nUsing shortened Landsat ID')
 
     # Setup and validate the path/row lists
-    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
-        wrs2_tile_list, path_list, row_list)
+    wrs2_tiles, paths, rows = check_wrs2_tiles(wrs2_tiles, paths, rows)
 
     # Error checking
     if not os.path.isdir(output_folder):
@@ -113,11 +117,14 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     # Read in metadata CSV files
     logging.info('\nReading metadata CSV files')
     quicklook_ids = defaultdict(dict)
-    for csv_name in csv_file_list:
+    for landsat_index, csv_name in csv_names.items():
         csv_path = os.path.join(csv_folder, csv_name)
         logging.info('{}'.format(csv_name))
 
-        if year_list and not csv_years[csv_name].intersection(set(year_list)):
+        if landsat_index not in landsat:
+            logging.info('  Skipping Landsat {}'.format(landsat_index))
+            continue
+        elif years and not csv_years[landsat_index].intersection(set(years)):
             logging.info('  No data for target year(s), skipping file')
             continue
         elif not os.path.isfile(csv_path):
@@ -207,16 +214,16 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         wrs2_tile = wrs2_tile_fmt.format(path, row)
 
         # Skip scenes first by path/row
-        if wrs2_tile_list and wrs2_tile not in wrs2_tile_list:
+        if wrs2_tiles and wrs2_tile not in wrs2_tiles:
             logging.info('{} - path/row, skipping'.format(root))
             continue
-        elif path_list and path not in path_list:
+        elif paths and path not in paths:
             logging.info('{} - path, skipping'.format(root))
             continue
-        elif row_list and row not in row_list:
+        elif rows and row not in rows:
             logging.info('{} - row, skipping'.format(root))
             continue
-        elif year_list and year not in year_list:
+        elif years and year not in years:
             logging.info('{} - year, skipping'.format(root))
             continue
         else:
@@ -354,6 +361,39 @@ def is_valid_folder(parser, arg):
         return arg
 
 
+def parse_int_set(nputstr=""):
+    """Return list of numbers given a string of ranges
+
+    http://thoughtsbyclayg.blogspot.com/2008/10/parsing-list-of-numbers-in-python.html
+    """
+    selection = set()
+    invalid = set()
+    # tokens are comma separated values
+    tokens = [x.strip() for x in nputstr.split(',')]
+    for i in tokens:
+        try:
+            # typically tokens are plain old integers
+            selection.add(int(i))
+        except:
+            # if not, then it might be a range
+            try:
+                token = [int(k.strip()) for k in i.split('-')]
+                if len(token) > 1:
+                    token.sort()
+                    # we have items separated by a dash
+                    # try to build a valid range
+                    first = token[0]
+                    last = token[len(token) - 1]
+                    for x in range(first, last + 1):
+                        selection.add(x)
+            except:
+                # not an int and not a range...
+                invalid.add(i)
+    # Report invalid tokens before returning valid selection
+    # print "Invalid set: " + str(invalid)
+    return selection
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
@@ -378,6 +418,9 @@ def arg_parse():
         '-y', '--years', default=None, nargs='+',
         help='Space/comma separated list of years or year ranges to keep '
              '(i.e. "--years 1984 2000-2015")')
+    parser.add_argument(
+        '-l', '--landsat', default=[5, 7, 8], choices=[5, 7, 8], nargs='+',
+        type=int, help='Space separated list of Landsat(s) to process')
     parser.add_argument(
         '--skiplist', default=None, metavar='FILE',
         type=lambda x: is_valid_file(parser, x),
@@ -409,4 +452,5 @@ if __name__ == '__main__':
 
     main(csv_folder=args.csv, quicklook_folder=args.quicklook,
          output_folder=args.output, wrs2_tiles=args.wrs2, years=args.years,
-         skip_list_path=args.skiplist, id_type=args.id_type)
+         landsat=args.landsat, skip_list_path=args.skiplist,
+         id_type=args.id_type)

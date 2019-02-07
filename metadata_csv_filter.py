@@ -9,7 +9,7 @@ import pandas as pd
 
 
 def main(csv_folder, wrs2_tiles=None, years=None, months=None,
-         conus_flag=False):
+         landsat=[5, 7, 8], conus_flag=False):
     """Filter Landsat Collection 1 bulk metadata CSV files
 
     Parameters
@@ -28,6 +28,10 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         Comma separated values or ranges of months to include.
         The default is None which will keep entries for all months.
         Example: ['1', '2', '3-5']
+    landsat : list, optional
+        CSV files will only be downloaded for the specified Landsat missions.
+        The default is to attempt to process Landsat(s) 5, 7, and 8, but this
+        is also dependent on the "years" parameter.
     conus_flag : bool, optional
         If True, remove all non-CONUS entries.
         Remove path < 10, path > 48, row < 25 or row > 43.
@@ -42,37 +46,37 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
     logging.info('\nFilter/reducing Landsat Metadata CSV files')
 
     if wrs2_tiles is not None:
-        wrs2_tile_list = sorted([
+        wrs2_tiles = sorted([
             x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
     else:
-        wrs2_tile_list = []
+        wrs2_tiles = []
 
     if years is not None:
-        year_list = sorted([x for y in years for x in parse_int_set(y)])
+        years = sorted([x for y in years for x in parse_int_set(y)])
     else:
-        year_list = []
+        years = []
 
     if months is not None:
-        month_list = sorted([x for m in months for x in parse_int_set(m)])
+        months = sorted([x for m in months for x in parse_int_set(m)])
     else:
-        month_list = []
+        months = []
 
     if conus_flag:
-        path_list = list(range(10, 49))
-        row_list = list(range(25, 44))
+        paths = list(range(10, 49))
+        rows = list(range(25, 44))
     else:
-        path_list = []
-        row_list = []
+        paths = []
+        rows = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
+    csv_names = {
+        8: 'LANDSAT_8_C1.csv',
+        7: 'LANDSAT_ETM_C1.csv',
+        5: 'LANDSAT_TM_C1.csv',
+    }
     csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        8: set(range(2013, 2099)),
+        7: set(range(1999, 2099)),
+        5: set(range(1984, 2012)),
     }
 
     # Input fields (default values in bulk metadata CSV file)
@@ -123,19 +127,23 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
     ]
 
     # Setup and validate the path/row lists
-    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
-        wrs2_tile_list, path_list, row_list)
+    wrs2_tiles, paths, rows = check_wrs2_tiles(wrs2_tiles, paths, rows)
 
     # Process each CSV
-    for csv_name in csv_file_list:
+    for landsat_index, csv_name in csv_names.items():
         csv_path = os.path.join(csv_folder, csv_name)
         logging.info('{}'.format(csv_name))
         logging.debug('  {}'.format(os.path.join(csv_folder, csv_name)))
 
-        if year_list and not csv_years[csv_name].intersection(set(year_list)):
-            # logging.info('  No data for target year(s), skipping file')
-            logging.info('  No data for target year(s), removing file')
-            os.remove(csv_path)
+        if landsat_index not in landsat:
+            logging.info('  Skipping Landsat {}'.format(landsat_index))
+            # logging.info('  Removing Landsat {} csv'.format(landsat_index))
+            # os.remove(csv_path)
+            continue
+        elif years and not csv_years[landsat_index].intersection(set(years)):
+            logging.info('  No data for target year(s), skipping file')
+            # logging.info('  No data for target year(s), removing file')
+            # os.remove(csv_path)
             continue
         elif not os.path.isfile(csv_path):
             logging.info('  The CSV file does not exist, skipping')
@@ -170,22 +178,22 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
                 logging.debug('  Scene count: {}'.format(len(input_df)))
 
             # Filter by path and row separately
-            if path_list and wrs2_path_col_out in input_df.columns:
+            if paths and wrs2_path_col_out in input_df.columns:
                 logging.debug('  Filtering by path')
-                input_df = input_df[input_df[wrs2_path_col_out] <= max(path_list)]
-                input_df = input_df[input_df[wrs2_path_col_out] >= min(path_list)]
-                input_df = input_df[input_df[wrs2_path_col_out].isin(path_list)]
-            if row_list and wrs2_row_col_out in input_df.columns:
+                input_df = input_df[input_df[wrs2_path_col_out] <= max(paths)]
+                input_df = input_df[input_df[wrs2_path_col_out] >= min(paths)]
+                input_df = input_df[input_df[wrs2_path_col_out].isin(paths)]
+            if rows and wrs2_row_col_out in input_df.columns:
                 logging.debug('  Filtering by row')
-                input_df = input_df[input_df[wrs2_row_col_out] <= max(row_list)]
-                input_df = input_df[input_df[wrs2_row_col_out] >= min(row_list)]
-                input_df = input_df[input_df[wrs2_row_col_out].isin(row_list)]
+                input_df = input_df[input_df[wrs2_row_col_out] <= max(rows)]
+                input_df = input_df[input_df[wrs2_row_col_out] >= min(rows)]
+                input_df = input_df[input_df[wrs2_row_col_out].isin(rows)]
 
             # Filter by WRS2 tile list (apply call raises exception on empty df)
             if input_df.empty:
                 logging.debug('  Empty dataframe, skipping chunk')
                 continue
-            if (wrs2_tile_list and
+            if (wrs2_tiles and
                     wrs2_path_col_out in input_df.columns and
                     wrs2_row_col_out in input_df.columns):
                 logging.debug('  Computing WRS2 tile')
@@ -199,19 +207,19 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
                     continue
 
                 logging.debug('  Filtering by path/row')
-                input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
+                input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tiles)]
                 # input_df.drop(wrs2_tile_col, axis=1, inplace=True)
 
             # Filter by year
-            if year_list and acq_date_col_out in input_df.columns:
+            if years and acq_date_col_out in input_df.columns:
                 input_df = input_df[
-                    input_df[acq_date_col_out].dt.year.isin(year_list)]
+                    input_df[acq_date_col_out].dt.year.isin(years)]
 
             # Skip early/late months
-            if month_list and acq_date_col_out in input_df.columns:
+            if months and acq_date_col_out in input_df.columns:
                 logging.debug('  Filtering by month')
                 input_df = input_df[
-                    input_df[acq_date_col_out].dt.month.isin(month_list)]
+                    input_df[acq_date_col_out].dt.month.isin(months)]
 
             # Subset and order columns to match metadata_csv_api.py
             input_df = input_df[[x[1] for x in use_cols] + [wrs2_tile_col]]
@@ -358,6 +366,9 @@ def arg_parse():
         help='Space/comma separated list of months or month ranges to keep '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
+        '-l', '--landsat', default=[5, 7, 8], choices=[5, 7, 8], nargs='+',
+        type=int, help='Space separated list of Landsat(s) files to filter')
+    parser.add_argument(
         '--conus', default=False, action='store_true',
         help='Filter CSV files to only CONUS Landsat images/tiles')
     parser.add_argument(
@@ -377,5 +388,5 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, wrs2_tiles=args.wrs2,
-         years=args.years, months=args.months, conus_flag=args.conus)
+    main(csv_folder=args.csv, wrs2_tiles=args.wrs2, years=args.years,
+         months=args.months, landsat=args.landsat, conus_flag=args.conus)

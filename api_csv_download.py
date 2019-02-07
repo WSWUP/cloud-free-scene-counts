@@ -11,7 +11,7 @@ API_URL = 'https://earthexplorer.usgs.gov/inventory/json/v/1.4.0/'
 
 
 def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
-         months=None):
+         months=None, landsat=None):
     """Download filtered Landsat Collection 1 metadata CSV files via the API
 
     Parameters
@@ -33,6 +33,10 @@ def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
         Comma separated values or ranges of months to include.
         The default is None which will keep entries for all months.
         Example: ['1', '2', '3-5']
+    landsat : list, optional
+        CSV files will only be downloaded for the specified Landsat missions.
+        The default is to attempt to process Landsat(s) 5, 7, and 8, but this
+        is also dependent on the "years" parameter.
 
     Notes
     -----
@@ -77,15 +81,15 @@ def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
         'LANDSAT_TM_C1': range(1984, 2011 + 1),
     }
 
-    wrs2_tile_list = sorted([
+    wrs2_tiles = sorted([
         x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
 
-    year_list = sorted([x for y in years for x in parse_int_set(y)])
+    years = sorted([x for y in years for x in parse_int_set(y)])
 
     if months is not None:
-        month_list = sorted([x for m in months for x in parse_int_set(m)])
+        months = sorted([x for m in months for x in parse_int_set(m)])
     else:
-        month_list = []
+        months = []
 
     # Login to get API key
     api_key = api_login(username, password)
@@ -147,7 +151,7 @@ def main(username, password, wrs2_tiles, years, csv_folder=os.getcwd(),
                     "apiKey": api_key
                 }
                 if months:
-                    payload["months"] = month_list
+                    payload["months"] = months
 
                 payload = {'jsonRequest': json.dumps(payload)}
                 logging.debug(payload)
@@ -295,6 +299,9 @@ def arg_parse():
         help='Space/comma separated list of months or month ranges to keep '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
+        '-l', '--landsat', default=[5, 7, 8], choices=[5, 7, 8], nargs='+',
+        type=int, help='Space separated list of Landsat(s) files to download')
+    parser.add_argument(
         '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
@@ -312,4 +319,5 @@ if __name__ == '__main__':
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
     main(username=args.username, password=args.password, csv_folder=args.csv,
-         wrs2_tiles=args.wrs2, years=args.years, months=args.months)
+         wrs2_tiles=args.wrs2, years=args.years, months=args.months,
+         landsat=args.landsat)

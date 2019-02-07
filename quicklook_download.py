@@ -9,7 +9,8 @@ import requests
 
 
 def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
-         skip_list_path=None, overwrite_flag=False, id_type='product'):
+         landsat=[5, 7, 8], skip_list_path=None, overwrite_flag=False,
+         id_type='product'):
     """Download Landsat Collection 1 quicklook images
 
     Parameters
@@ -30,6 +31,10 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         Comma separated values or ranges of months to download.
         The default is None which will download images for all months.
         Example: ['1', '2', '3-5']
+    landsat : list, optional
+        CSV files will only be downloaded for the specified Landsat missions.
+        The default is to attempt to process Landsat(s) 5, 7, and 8, but this
+        is also dependent on the "years" parameter.
     skip_list_path : str, optional
         File path of an existing Landsat skip list (the default is None).
     overwrite_flag : bool, optional
@@ -50,33 +55,33 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
     cloud_folder_name = 'cloudy'
 
     if wrs2_tiles is not None:
-        wrs2_tile_list = sorted([
+        wrs2_tiles = sorted([
             x.strip() for w in wrs2_tiles for x in w.split(',') if x.strip()])
     else:
-        wrs2_tile_list = []
+        wrs2_tiles = []
 
     if years is not None:
-        year_list = sorted([x for y in years for x in parse_int_set(y)])
+        years = sorted([x for y in years for x in parse_int_set(y)])
     else:
-        year_list = []
+        years = []
 
     if months is not None:
-        month_list = sorted([x for m in months for x in parse_int_set(m)])
+        months = sorted([x for m in months for x in parse_int_set(m)])
     else:
-        month_list = []
+        months = []
 
-    path_list = []
-    row_list = []
+    paths = []
+    rows = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
+    csv_names = {
+        8: 'LANDSAT_8_C1.csv',
+        7: 'LANDSAT_ETM_C1.csv',
+        5: 'LANDSAT_TM_C1.csv',
+    }
     csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        8: set(range(2013, 2099)),
+        7: set(range(1999, 2099)),
+        5: set(range(1984, 2012)),
     }
 
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
@@ -111,8 +116,7 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         logging.info('\nUsing shortened Landsat ID')
 
     # Setup and validate the path/row lists
-    wrs2_tile_list, path_list, row_list = check_wrs2_tiles(
-        wrs2_tile_list, path_list, row_list)
+    wrs2_tiles, paths, rows = check_wrs2_tiles(wrs2_tiles, paths, rows)
 
     # Error checking
     if not os.path.isdir(csv_folder):
@@ -132,11 +136,14 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
 
     logging.info('\nReading metadata CSV files')
     download_list = []
-    for csv_name in csv_file_list:
+    for landsat_index, csv_name in csv_names.items():
         logging.info('{}'.format(csv_name))
         csv_path = os.path.join(csv_folder, csv_name)
 
-        if year_list and not csv_years[csv_name].intersection(set(year_list)):
+        if landsat_index not in landsat:
+            logging.info('  Skipping Landsat {}'.format(landsat_index))
+            continue
+        elif years and not csv_years[landsat_index].intersection(set(years)):
             logging.info('  No data for target year(s), skipping file')
             continue
         elif not os.path.isfile(csv_path):
@@ -157,16 +164,16 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         logging.debug('  Initial scene count: {}'.format(len(input_df)))
 
         # Filter scenes first by path and row separately
-        if path_list:
+        if paths:
             logging.debug('  Filtering by path')
-            input_df = input_df[input_df[wrs2_path_col] <= max(path_list)]
-            input_df = input_df[input_df[wrs2_path_col] >= min(path_list)]
-            input_df = input_df[input_df[wrs2_path_col].isin(path_list)]
-        if row_list:
+            input_df = input_df[input_df[wrs2_path_col] <= max(paths)]
+            input_df = input_df[input_df[wrs2_path_col] >= min(paths)]
+            input_df = input_df[input_df[wrs2_path_col].isin(paths)]
+        if rows:
             logging.debug('  Filtering by row')
-            input_df = input_df[input_df[wrs2_row_col] <= max(row_list)]
-            input_df = input_df[input_df[wrs2_row_col] >= min(row_list)]
-            input_df = input_df[input_df[wrs2_row_col].isin(row_list)]
+            input_df = input_df[input_df[wrs2_row_col] <= max(rows)]
+            input_df = input_df[input_df[wrs2_row_col] >= min(rows)]
+            input_df = input_df[input_df[wrs2_row_col].isin(rows)]
 
         # Then filter by path/row combined
         # DEADBEEF - WRS2_TILE should already be in the file
@@ -176,20 +183,19 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         except ValueError:
             logging.info('  Possible empty DataFrame, skipping file')
             continue
-        if wrs2_tile_list:
+        if wrs2_tiles:
             logging.debug('  Filtering by path/row')
-            input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tile_list)]
+            input_df = input_df[input_df[wrs2_tile_col].isin(wrs2_tiles)]
 
         # Filter by year
-        if year_list:
+        if years:
             logging.debug('  Filtering by year')
-            input_df = input_df[input_df[acq_date_col].dt.year.isin(year_list)]
+            input_df = input_df[input_df[acq_date_col].dt.year.isin(years)]
 
         # Skip early/late months
-        if month_list:
+        if months:
             logging.debug('  Filtering by month')
-            input_df = input_df[
-                input_df[acq_date_col].dt.month.isin(month_list)]
+            input_df = input_df[input_df[acq_date_col].dt.month.isin(months)]
         # if start_month:
         #     logging.debug('  Filtering by start month')
         #     input_df = input_df[input_df[date_col].dt.month >= start_month]
@@ -450,6 +456,9 @@ def arg_parse():
         help='Space/comma separated list of months or month ranges to download '
              '(i.e. "--months 1 2 3-5")')
     parser.add_argument(
+        '-l', '--landsat', default=[5, 7, 8], choices=[5, 7, 8], nargs='+',
+        type=int, help='Space separated list of Landsat(s) to process')
+    parser.add_argument(
         '--skiplist', default=None, metavar='FILE',
         type=lambda x: is_valid_file(parser, x),
         help='File path of scene IDs that should be downloaded directly to '
@@ -483,5 +492,5 @@ if __name__ == '__main__':
 
     main(csv_folder=args.csv, output_folder=args.output,
          wrs2_tiles=args.wrs2, years=args.years, months=args.months,
-         skip_list_path=args.skiplist, id_type=args.id_type,
-         overwrite_flag=args.overwrite)
+         landsat=args.landsat, skip_list_path=args.skiplist,
+         id_type=args.id_type, overwrite_flag=args.overwrite)
