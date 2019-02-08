@@ -133,9 +133,9 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         logging.debug('  {}'.format(os.path.join(csv_folder, csv_name)))
 
         if year_list and not csv_years[csv_name].intersection(set(year_list)):
-            # logging.info('  No data for target year(s), skipping file')
-            logging.info('  No data for target year(s), removing file')
-            os.remove(csv_path)
+            logging.info('  No data for target year(s), skipping file')
+            # logging.info('  No data for target year(s), removing file')
+            # os.remove(csv_path)
             continue
         elif not os.path.isfile(csv_path):
             logging.info('  The CSV file does not exist, skipping')
