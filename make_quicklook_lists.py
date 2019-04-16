@@ -354,6 +354,39 @@ def is_valid_folder(parser, arg):
         return arg
 
 
+def parse_int_set(nputstr=""):
+    """Return list of numbers given a string of ranges
+
+    http://thoughtsbyclayg.blogspot.com/2008/10/parsing-list-of-numbers-in-python.html
+    """
+    selection = set()
+    invalid = set()
+    # tokens are comma separated values
+    tokens = [x.strip() for x in nputstr.split(',')]
+    for i in tokens:
+        try:
+            # typically tokens are plain old integers
+            selection.add(int(i))
+        except:
+            # if not, then it might be a range
+            try:
+                token = [int(k.strip()) for k in i.split('-')]
+                if len(token) > 1:
+                    token.sort()
+                    # we have items separated by a dash
+                    # try to build a valid range
+                    first = token[0]
+                    last = token[len(token) - 1]
+                    for x in range(first, last + 1):
+                        selection.add(x)
+            except:
+                # not an int and not a range...
+                invalid.add(i)
+    # Report invalid tokens before returning valid selection
+    # print "Invalid set: " + str(invalid)
+    return selection
+
+
 def arg_parse():
     """"""
     parser = argparse.ArgumentParser(
