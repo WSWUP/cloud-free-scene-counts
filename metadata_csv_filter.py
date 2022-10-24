@@ -8,14 +8,16 @@ import sys
 import pandas as pd
 
 
-def main(csv_folder, wrs2_tiles=None, years=None, months=None,
+def main(csv_folder, collection=2, wrs2_tiles=None, years=None, months=None,
          conus_flag=False):
-    """Filter Landsat Collection 1 bulk metadata CSV files
+    """Filter Landsat bulk metadata CSV files
 
     Parameters
     ----------
     csv_folder : str
         Folder path of the Landsat bulk metadata CSV files.
+    collection : int, str, optional
+        Landsat Collection number (the default is 2).
     wrs2_tiles : list, optional
         Landsat WRS2 tiles (path/rows) to include.
         The default is None which will keep entries for all tiles.
@@ -64,30 +66,58 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         path_list = []
         row_list = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
-    csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
-    }
+    if collection in [2, '2', 'c02', 'C02' 'c2', 'C2']:
+        csv_file_list = [
+            'LANDSAT_OT_C2_L1.csv',
+            'LANDSAT_ETM_C2_L1.csv',
+            'LANDSAT_TM_C2_L1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_OT_C2_L1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C2_L1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C2_L1.csv': set(range(1984, 2012)),
+        }
+    elif collection in [1, '1', 'c01', 'C01' 'c1', 'C1']:
+        csv_file_list = [
+            'LANDSAT_8_C1.csv',
+            'LANDSAT_ETM_C1.csv',
+            'LANDSAT_TM_C1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        }
+    else:
+        raise ValueError(f'unsupported collection: {collection}')
 
     # Input fields (default values in bulk metadata CSV file)
-    acq_date_col = 'acquisitionDate'
-    browse_url_col = 'browseURL'
-    cloud_col = 'CLOUD_COVER_LAND'
-    col_number_col = 'COLLECTION_NUMBER'
-    col_category_col = 'COLLECTION_CATEGORY'
-    product_id_col = 'LANDSAT_PRODUCT_ID'
-    scene_id_col = 'sceneID'
-    sensor_col = 'sensor'
-    time_col = 'sceneStartTime'
-    data_type_col = 'DATA_TYPE_L1'
-    wrs2_path_col = 'path'
-    wrs2_row_col = 'row'
+    if collection in [2, '2', 'c02', 'C02' 'c2', 'C2']:
+        acq_date_col = 'Date Acquired'
+        browse_url_col = 'Browse Link'
+        cloud_col = 'Land Cloud Cover'
+        col_number_col = 'Collection Number'
+        col_category_col = 'Collection Category'
+        product_id_col = 'Landsat Product Identifier L1'
+        scene_id_col = 'Landsat Scene Identifier'
+        sensor_col = 'Sensor Identifier'
+        time_col = 'Start Time'
+        data_type_col = 'Data Type L1'
+        wrs2_path_col = 'WRS Path'
+        wrs2_row_col = 'WRS Row'
+    elif collection in [1, '1', 'c01', 'C01' 'c1', 'C1']:
+        acq_date_col = 'acquisitionDate'
+        browse_url_col = 'browseURL'
+        cloud_col = 'CLOUD_COVER_LAND'
+        col_number_col = 'COLLECTION_NUMBER'
+        col_category_col = 'COLLECTION_CATEGORY'
+        product_id_col = 'LANDSAT_PRODUCT_ID'
+        scene_id_col = 'sceneID'
+        sensor_col = 'sensor'
+        time_col = 'sceneStartTime'
+        data_type_col = 'DATA_TYPE_L1'
+        wrs2_path_col = 'path'
+        wrs2_row_col = 'row'
 
     # Output fieldnames (matches metadata_csv_api.py and newer style formatting)
     acq_date_col_out = 'ACQUISITION_DATE'
@@ -146,6 +176,11 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
         append_flag = False
         for input_df in pd.read_csv(csv_path, chunksize=1 << 16):
             logging.debug('\n  Scene count: {}'.format(len(input_df)))
+
+            # DEADBEEF - Debug lines
+            # print(input_df.iloc[0])
+            # pprint.pprint(list(input_df.columns))
+            # input('ENTER')
 
             # Rename fields before filtering
             for input_col, output_col in use_cols:
@@ -226,6 +261,8 @@ def main(csv_folder, wrs2_tiles=None, years=None, months=None,
             else:
                 input_df.to_csv(temp_path, mode='w', index=False, header=True)
                 append_flag = True
+            print(temp_path)
+            input('ENTER')
 
         # Overwrite metadata csv with filter csv
         if os.path.isfile(temp_path):
@@ -346,6 +383,9 @@ def arg_parse():
         type=lambda x: is_valid_folder(parser, x),
         help='Landsat bulk metadata CSV folder')
     parser.add_argument(
+        '-coll', '--collection', default='2', choices=['1', '2'],
+        help='Landsat Collection number')
+    parser.add_argument(
         '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
         help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. --wrs2 p043r032 p043r033)')
@@ -361,7 +401,7 @@ def arg_parse():
         '--conus', default=False, action='store_true',
         help='Filter CSV files to only CONUS Landsat images/tiles')
     parser.add_argument(
-        '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
+        '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
@@ -377,5 +417,11 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, wrs2_tiles=args.wrs2,
-         years=args.years, months=args.months, conus_flag=args.conus)
+    main(
+        csv_folder=args.csv,
+        collection=args.collection,
+        wrs2_tiles=args.wrs2,
+        years=args.years,
+        months=args.months,
+        conus_flag=args.conus,
+    )
