@@ -10,10 +10,17 @@
 # All bulk metadata GZ files
 *.gz
 
-# Full collection 1 bulk metadata CSV files
+# Full Collection 1 bulk metadata CSV files
 LANDSAT_8_C1.csv
 LANDSAT_ETM_C1.csv
 LANDSAT_TM_C1.csv
+
+# Full Collection 2 bulk metadata CSV files
+LANDSAT_OT_C2_L1.csv
+LANDSAT_ETM_C2_L1.csv
+LANDSAT_TM_C2_l1.csv
+
+# Filtered CSV files
 *_filter.csv
 
 # Quicklook JPEGs

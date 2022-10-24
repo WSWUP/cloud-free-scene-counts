@@ -8,9 +8,10 @@ import pandas as pd
 import requests
 
 
-def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
+def main(csv_folder, output_folder, collection=2,
+         wrs2_tiles=None, years=None, months=None,
          skip_list_path=None, overwrite_flag=False, id_type='product'):
-    """Download Landsat Collection 1 quicklook images
+    """Download Landsat quicklook images
 
     Parameters
     ----------
@@ -18,6 +19,8 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
         Folder path of the Landsat metadata CSV files.
     output_folder : str
         Folder path where the quicklook images will be saved.
+    collection : int, str, optional
+        Landsat Collection number (the default is 2).
     wrs2_tiles : list, optional
         Landsat WRS2 tiles (path/rows) to download images for.
         The default is None which will download images for all tiles.
@@ -68,16 +71,30 @@ def main(csv_folder, output_folder, wrs2_tiles=None, years=None, months=None,
     path_list = []
     row_list = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
-    csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
-    }
+    if collection in [2, '2', 'c02', 'C02' 'c2', 'C2']:
+        csv_file_list = [
+            'LANDSAT_OT_C2_L1.csv',
+            'LANDSAT_ETM_C2_L1.csv',
+            'LANDSAT_TM_C2_L1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_OT_C2_L1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C2_L1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C2_L1.csv': set(range(1984, 2012)),
+        }
+    elif collection in [1, '1', 'c01', 'C01' 'c1', 'C1']:
+        csv_file_list = [
+            'LANDSAT_8_C1.csv',
+            'LANDSAT_ETM_C1.csv',
+            'LANDSAT_TM_C1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        }
+    else:
+        raise ValueError(f'unsupported collection: {collection}')
 
     wrs2_tile_fmt = 'p{:03d}r{:03d}'
 
@@ -438,6 +455,9 @@ def arg_parse():
         type=lambda x: is_valid_folder(parser, x),
         help='Output folder')
     parser.add_argument(
+        '-coll', '--collection', default='2', choices=['1', '2'],
+        help='Landsat Collection number')
+    parser.add_argument(
         '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
         help='Space/comma separated list of Landsat WRS2 tiles to download '
              '(i.e. --wrs2 p043r032 p043r033)')
@@ -458,10 +478,10 @@ def arg_parse():
         '-id', '--id_type', default='product', choices=['product', 'short'],
         help='Landsat ID type')
     parser.add_argument(
-        '-o', '--overwrite', default=False, action='store_true',
+        '--overwrite', default=False, action='store_true',
         help='Overwite existing quicklooks')
     parser.add_argument(
-        '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
+        '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
@@ -481,7 +501,14 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, output_folder=args.output,
-         wrs2_tiles=args.wrs2, years=args.years, months=args.months,
-         skip_list_path=args.skiplist, id_type=args.id_type,
-         overwrite_flag=args.overwrite)
+    main(
+        csv_folder=args.csv,
+        output_folder=args.output,
+        collection=args.collection,
+        wrs2_tiles=args.wrs2,
+        years=args.years,
+        months=args.months,
+        skip_list_path=args.skiplist,
+        id_type=args.id_type,
+        overwrite_flag=args.overwrite
+    )

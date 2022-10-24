@@ -11,8 +11,10 @@ import sys
 import pandas as pd
 
 
-def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
-         years=None, skip_list_path=None, summary_flag=True, id_type='product'):
+def main(csv_folder, quicklook_folder, output_folder, collection=2,
+         wrs2_tiles=None, years=None, skip_list_path=None,
+         summary_flag=True, id_type='product',
+         ):
     """Generate Landsat scene ID skip and keep lists from quicklooks
 
     Parameters
@@ -23,6 +25,8 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
         Folder path of the Landsat quicklook images.
     output_folder : str
         Folder path to save skip list.
+    collection : int, str, optional
+        Landsat Collection number (the default is 2).
     wrs2_tiles : list, optional
         Landsat WRS2 tiles (path/rows) to include in output files.
         The default is None which will include images for all tiles.
@@ -66,16 +70,30 @@ def main(csv_folder, quicklook_folder, output_folder, wrs2_tiles=None,
     path_list = []
     row_list = []
 
-    csv_file_list = [
-        'LANDSAT_8_C1.csv',
-        'LANDSAT_ETM_C1.csv',
-        'LANDSAT_TM_C1.csv',
-    ]
-    csv_years = {
-        'LANDSAT_8_C1.csv': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
-    }
+    if collection in [2, '2', 'c02', 'C02' 'c2', 'C2']:
+        csv_file_list = [
+            'LANDSAT_OT_C2_L1.csv',
+            'LANDSAT_ETM_C2_L1.csv',
+            'LANDSAT_TM_C2_L1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_OT_C2_L1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C2_L1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C2_L1.csv': set(range(1984, 2012)),
+        }
+    elif collection in [1, '1', 'c01', 'C01' 'c1', 'C1']:
+        csv_file_list = [
+            'LANDSAT_8_C1.csv',
+            'LANDSAT_ETM_C1.csv',
+            'LANDSAT_TM_C1.csv',
+        ]
+        csv_years = {
+            'LANDSAT_8_C1.csv': set(range(2013, 2099)),
+            'LANDSAT_ETM_C1.csv': set(range(1999, 2099)),
+            'LANDSAT_TM_C1.csv': set(range(1984, 2012)),
+        }
+    else:
+        raise ValueError(f'unsupported collection: {collection}')
 
     product_id_col = 'LANDSAT_PRODUCT_ID'
     wrs2_path_col = 'WRS_PATH'
@@ -404,6 +422,9 @@ def arg_parse():
         '--output', default=os.getcwd(), metavar='FOLDER',
         help='Output folder')
     parser.add_argument(
+        '-coll', '--collection', default='2', choices=['1', '2'],
+        help='Landsat Collection number')
+    parser.add_argument(
         '-pr', '--wrs2', default=None, nargs='+', metavar='pXXXrYYY',
         help='Space/comma separated list of Landsat WRS2 tiles to keep '
              '(i.e. --wrs2 p043r032 p043r033)')
@@ -420,7 +441,7 @@ def arg_parse():
         '-id', '--id_type', default='product', choices=['product', 'short'],
         help='Landsat ID type')
     parser.add_argument(
-        '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
+        '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
@@ -440,6 +461,13 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, quicklook_folder=args.quicklook,
-         output_folder=args.output, wrs2_tiles=args.wrs2, years=args.years,
-         skip_list_path=args.skiplist, id_type=args.id_type)
+    main(
+        csv_folder=args.csv,
+        quicklook_folder=args.quicklook,
+        output_folder=args.output,
+        collection=args.collection,
+        wrs2_tiles=args.wrs2,
+        years=args.years,
+        skip_list_path=args.skiplist,
+        id_type=args.id_type,
+    )

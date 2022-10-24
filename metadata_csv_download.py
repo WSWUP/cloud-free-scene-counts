@@ -6,13 +6,15 @@ import os
 import requests
 
 
-def main(csv_folder, years=None, overwrite_flag=False):
-    """Download Landsat Collection 1 bulk metadata CSV GZ files and extract
+def main(csv_folder, collection=2, years=None, overwrite_flag=False):
+    """Download Landsat bulk metadata CSV GZ files and extract
 
     Parameters
     ----------
     csv_folder : str
         Folder path where the Landsat bulk metadata CSV files will be saved.
+    collection : int, str, optional
+        Landsat Collection number (the default is 2).
     years : list, optional
         Comma separated values or ranges of years to include.
         CSV files will only be downloaded if they include data for target years.
@@ -36,16 +38,30 @@ def main(csv_folder, years=None, overwrite_flag=False):
     download_url = 'https://landsat.usgs.gov/landsat/metadata_service/bulk_metadata_files'
 
     # The CSV GZ files are 15-20% of the full file size
-    gz_file_list = [
-        'LANDSAT_8_C1.csv.gz',
-        'LANDSAT_ETM_C1.csv.gz',
-        'LANDSAT_TM_C1.csv.gz',
-    ]
-    gz_years = {
-        'LANDSAT_8_C1.csv.gz': set(range(2013, 2099)),
-        'LANDSAT_ETM_C1.csv.gz': set(range(1999, 2099)),
-        'LANDSAT_TM_C1.csv.gz': set(range(1984, 2012)),
-    }
+    if collection in [2, '2', 'c02', 'C02' 'c2', 'C2']:
+        gz_file_list = [
+            'LANDSAT_OT_C2_L1.csv.gz',
+            'LANDSAT_ETM_C2_L1.csv.gz',
+            'LANDSAT_TM_C2_L1.csv.gz',
+        ]
+        gz_years = {
+            'LANDSAT_OT_C2_L1.csv.gz': set(range(2013, 2099)),
+            'LANDSAT_ETM_C2_L1.csv.gz': set(range(1999, 2099)),
+            'LANDSAT_TM_C2_L1.csv.gz': set(range(1984, 2012)),
+        }
+    elif collection in [1, '1', 'c01', 'C01' 'c1', 'C1']:
+        gz_file_list = [
+            'LANDSAT_8_C1.csv.gz',
+            'LANDSAT_ETM_C1.csv.gz',
+            'LANDSAT_TM_C1.csv.gz',
+        ]
+        gz_years = {
+            'LANDSAT_8_C1.csv.gz': set(range(2013, 2099)),
+            'LANDSAT_ETM_C1.csv.gz': set(range(1999, 2099)),
+            'LANDSAT_TM_C1.csv.gz': set(range(1984, 2012)),
+        }
+    else:
+       raise ValueError(f'unsupported collection: {collection}')
 
     if years is not None:
         user_years = set([x for y in years for x in parse_int_set(y)])
@@ -182,14 +198,17 @@ def arg_parse():
         type=lambda x: is_valid_folder(parser, x),
         help='Landsat bulk metadata CSV folder')
     parser.add_argument(
+        '-coll', '--collection', default='2', choices=['1', '2'],
+        help='Landsat Collection number')
+    parser.add_argument(
         '-y', '--years', default=None, nargs='+',
         help='Space/comma separated list of years or year ranges to keep '
              '(i.e. "--years 1984 2000-2015")')
     parser.add_argument(
-        '-o', '--overwrite', default=False, action='store_true',
+        '--overwrite', default=False, action='store_true',
         help='Force overwrite of existing files')
     parser.add_argument(
-        '-d', '--debug', default=logging.INFO, const=logging.DEBUG,
+        '--debug', default=logging.INFO, const=logging.DEBUG,
         help='Debug level logging', action='store_const', dest='loglevel')
     args = parser.parse_args()
 
@@ -205,4 +224,9 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=args.loglevel, format='%(message)s')
 
-    main(csv_folder=args.csv, years=args.years, overwrite_flag=args.overwrite)
+    main(
+        csv_folder=args.csv,
+        collection=args.collection,
+        years=args.years,
+        overwrite_flag=args.overwrite
+    )
